@@ -213,3 +213,42 @@ export function fetchLeaderboard(
 ): Promise<LeaderboardResult> {
   return new Promise((resolve) => setTimeout(() => resolve(getLeaderboard(scope, slug)), 500));
 }
+
+/* ── Кто как предсказал на конкретном событии (детерминированно) ── */
+
+export interface EventLeader {
+  username: string;
+  displayName: string;
+  gradeIndex: number;
+  brier: number;
+  isMe?: boolean;
+}
+
+export function eventLeaders(slug: string, outcome: boolean): EventLeader[] {
+  const leaders = USERS.slice(0, 8).map((x) => {
+    const rng = mulberry32(hashStr(slug + x.username));
+    const correctBias = 0.62 + (0.2 - Math.min(0.2, x.meanBrier)); // навык → чаще прав
+    const onRight = rng() < correctBias;
+    let gradeIndex: number;
+    if (onRight) gradeIndex = outcome ? (rng() < 0.6 ? 4 : 3) : rng() < 0.6 ? 0 : 1;
+    else gradeIndex = outcome ? (rng() < 0.6 ? 1 : 0) : rng() < 0.6 ? 3 : 4;
+    if (rng() < 0.1) gradeIndex = 2;
+    return {
+      username: x.username,
+      displayName: x.displayName,
+      gradeIndex,
+      brier: brier(GRADES[gradeIndex].probability, outcome),
+      isMe: x.username === ME,
+    };
+  });
+  leaders.sort((a, b) => a.brier - b.brier);
+  return leaders.slice(0, 5);
+}
+
+/** Словесная оценка результата прогноза по Brier. */
+export function resultVerdict(brierValue: number): string {
+  if (brierValue < 0.08) return "В точку";
+  if (brierValue < 0.2) return "Хорошо";
+  if (brierValue < 0.45) return "Неплохо";
+  return "Мимо";
+}
