@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CategoryChip, StatusBadge, OutcomeBadge } from "@/components/ui/Badge";
 import { MiniConsensus } from "./MiniConsensus";
+import { crowdTotal } from "@/lib/crowd";
 import { categoryTitle } from "@/lib/mock";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { deadlineLabel } from "@/lib/format";
@@ -61,11 +62,19 @@ export function EventCard({ event }: { event: PredictionEvent }) {
 
         {predicted && !isResolved && (
           <div className="rounded-xl bg-paper p-3.5">
-            <div className="mb-2.5 flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <span className="text-xs text-slate">Ваше показание</span>
               <GradePill grade={event.myGrade!} />
             </div>
-            <MiniConsensus crowd={event.crowd} mine={event.myGrade} />
+            {crowdTotal(event.crowd) > 0 ? (
+              <div className="mt-2.5">
+                <MiniConsensus crowd={event.crowd} mine={event.myGrade} />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate">
+                Прогноз учтён. Мнение толпы откроется после закрытия приёма.
+              </p>
+            )}
           </div>
         )}
 

@@ -1,30 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TopNav } from "@/components/app/TopNav";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
-import { CATEGORIES } from "@/lib/mock";
-import { fetchLeaderboard, type LeaderboardResult } from "@/lib/mock-users";
-import type { LeaderboardScope } from "@/lib/types";
+import { useAuth } from "@/components/app/AuthProvider";
+import type { LeaderboardRow, LeaderboardScope } from "@/lib/types";
+import type { ApiCategory } from "@/lib/api/dto";
+import {
+  getCategoryLeaderboard,
+  getGlobalLeaderboard,
+  getSeasonLeaderboard,
+  listCategories,
+  lookupUser,
+} from "@/lib/api/endpoints";
+
+const SEASON_SLUG = "2026-q2";
 
 export default function LeaderboardsPage() {
+  const { me } = useAuth();
   const [scope, setScope] = useState<LeaderboardScope>("global");
-  const [cat, setCat] = useState(CATEGORIES[0].slug);
-  const [data, setData] = useState<LeaderboardResult | null>(null);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [cat, setCat] = useState<string>("");
+  const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    listCategories().then((c) => {
+      setCategories(c ?? []);
+      if (c && c.length) setCat((prev) => prev || c[0].id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (scope === "category" && !cat) return;
     let alive = true;
-    setData(null);
+    setRows(null);
     setError(false);
-    fetchLeaderboard(scope, scope === "category" ? cat : undefined)
-      .then((d) => alive && setData(d))
-      .catch(() => alive && setError(true));
+    (async () => {
+      try {
+        const lb =
+          scope === "category"
+            ? await getCategoryLeaderboard(cat)
+            : scope === "season"
+              ? await getSeasonLeaderboard(SEASON_SLUG)
+              : await getGlobalLeaderboard();
+        const entries = lb?.entries ?? [];
+        const refs = await Promise.all(entries.map((e) => lookupUser(e.user_id)));
+        const out: LeaderboardRow[] = entries.map((e, i) => ({
+          rank: e.rank,
+          username: refs[i]?.username ?? e.user_id.slice(0, 8),
+          displayName: refs[i]?.display_name ?? "—",
+          meanBrier: Number(e.mean_brier),
+          nResolved: e.n_resolved,
+          isMe: !!me && refs[i]?.username === me.username,
+        }));
+        if (alive) setRows(out);
+      } catch {
+        if (alive) setError(true);
+      }
+    })();
     return () => {
       alive = false;
     };
-  }, [scope, cat, reload]);
+  }, [scope, cat, reload, me]);
+
+  const catTitle = useMemo(
+    () => categories.find((c) => c.id === cat)?.title ?? "",
+    [categories, cat],
+  );
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -32,31 +76,25 @@ export default function LeaderboardsPage() {
       <main className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
         <h1 className="font-display text-2xl font-600 sm:text-3xl">Лидерборды</h1>
         <p className="mt-1.5 text-sm text-slate">
-          Ранжирование по среднему Brier — меньше значит точнее. В зачёт идут только
-          участники, преодолевшие порог по числу разрешённых прогнозов.
+          Ранжирование по точности (Brier — меньше значит точнее). В зачёт идут участники,
+          преодолевшие порог по числу разрешённых прогнозов.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center gap-2">
-          <Tab on={scope === "global"} onClick={() => setScope("global")}>
-            Глобальный
-          </Tab>
-          <Tab on={scope === "category"} onClick={() => setScope("category")}>
-            По категориям
-          </Tab>
-          <Tab on={scope === "season"} onClick={() => setScope("season")}>
-            Сезон
-          </Tab>
+          <Tab on={scope === "global"} onClick={() => setScope("global")}>Глобальный</Tab>
+          <Tab on={scope === "category"} onClick={() => setScope("category")}>По категориям</Tab>
+          <Tab on={scope === "season"} onClick={() => setScope("season")}>Сезон</Tab>
         </div>
 
         {scope === "category" && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
-                key={c.slug}
-                onClick={() => setCat(c.slug)}
-                aria-pressed={cat === c.slug}
+                key={c.id}
+                onClick={() => setCat(c.id)}
+                aria-pressed={cat === c.id}
                 className={`rounded-full px-3 py-1.5 text-sm font-600 transition-colors ${
-                  cat === c.slug
+                  cat === c.id
                     ? "bg-graphite text-white"
                     : "border border-line bg-surface text-slate hover:text-graphite"
                 }`}
@@ -72,14 +110,17 @@ export default function LeaderboardsPage() {
         <div className="mt-6">
           {error ? (
             <ErrorState onRetry={() => setReload((n) => n + 1)} />
-          ) : !data ? (
+          ) : !rows ? (
             <TableSkeleton />
-          ) : data.rows.length === 0 ? (
-            <Empty />
+          ) : rows.length === 0 ? (
+            <Empty scope={scope} catTitle={catTitle} />
           ) : (
             <>
-              <LeaderboardTable rows={data.rows} />
-              <ThresholdNote threshold={data.threshold} excluded={data.excluded} />
+              <LeaderboardTable rows={rows} />
+              <p className="mt-4 text-xs leading-relaxed text-slate">
+                Средний Brier по разным наборам событий сопоставим не полностью — порог
+                участия и общий пул сезона смягчают это.
+              </p>
             </>
           )}
         </div>
@@ -99,36 +140,14 @@ function SeasonBanner() {
           </p>
         </div>
         <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">
-          идёт · до 30 июн
+          идёт
         </span>
       </div>
-      <p className="mt-3 text-xs text-slate">
-        Право на приз — при охвате не менее 60% пула сезона. Правила опубликованы до старта.
-      </p>
     </div>
   );
 }
 
-function ThresholdNote({ threshold, excluded }: { threshold: number; excluded: number }) {
-  return (
-    <p className="mt-4 text-xs leading-relaxed text-slate">
-      Порог участия: не менее {threshold} разрешённых прогнозов.{" "}
-      {excluded > 0 && `Скрыто участников ниже порога: ${excluded}. `}
-      Средний Brier по разным наборам событий сопоставим не полностью — порог и общий
-      пул сезона смягчают это.
-    </p>
-  );
-}
-
-function Tab({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function Tab({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -157,10 +176,16 @@ function TableSkeleton() {
   );
 }
 
-function Empty() {
+function Empty({ scope, catTitle }: { scope: LeaderboardScope; catTitle: string }) {
+  const what =
+    scope === "season"
+      ? "в этом сезоне"
+      : scope === "category"
+        ? `в категории «${catTitle}»`
+        : "";
   return (
     <div className="rounded-[var(--radius-card)] border border-dashed border-line bg-surface py-14 text-center">
-      <p className="font-display text-lg font-500">Пока нет участников в зачёте</p>
+      <p className="font-display text-lg font-500">Пока нет участников в зачёте {what}</p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-slate">
         Здесь появятся прогнозисты, преодолевшие порог по числу разрешённых прогнозов.
       </p>

@@ -4,7 +4,7 @@ import { CategoryChip } from "@/components/ui/Badge";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
 import { categoryTitle } from "@/lib/mock";
-import { eventLeaders, resultVerdict, ME } from "@/lib/mock-users";
+import { resultVerdict } from "@/lib/mock-users";
 import { fmtBrier, fmtDate } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
 
@@ -88,33 +88,6 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
             Уверенный промах стоит дорого — вот цена каждой градации при исходе «{outcome ? "ДА" : "НЕТ"}».
           </p>
           <ScoringBars event={event} gradeBrier={gradeBrier} myIdx={myIdx} />
-        </section>
-
-        {/* Лучшие на событии */}
-        <section className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-6">
-          <h2 className="mb-4 font-display text-lg font-600">Лучшие на этом событии</h2>
-          <ul className="divide-y divide-line">
-            {eventLeaders(event.slug, outcome).map((l, i) => (
-              <li key={l.username} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                <span className="w-5 font-mono text-sm font-700 tnum text-slate">{i + 1}</span>
-                <Link
-                  href={`/u/${l.username}`}
-                  className={`min-w-0 flex-1 truncate text-sm font-600 hover:underline ${
-                    l.isMe ? "text-[color:var(--color-signal-deep)]" : ""
-                  }`}
-                >
-                  @{l.username}
-                  {l.isMe && <span className="ml-1.5 text-xs">вы</span>}
-                </Link>
-                <span className="text-xs font-600" style={{ color: gradeColor(l.gradeIndex) }}>
-                  {GRADES[l.gradeIndex].short}
-                </span>
-                <span className="w-12 text-right font-mono text-sm font-700 tnum">
-                  {fmtBrier(l.brier)}
-                </span>
-              </li>
-            ))}
-          </ul>
         </section>
 
         {/* Источник истины */}

@@ -6,3 +6,7 @@ next-env.d.ts
 *.tsbuildinfo
 .env*.local
 .DS_Store
+
+# python caches from dev/mock-esia
+__pycache__/
+*.pyc

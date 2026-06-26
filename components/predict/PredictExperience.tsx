@@ -6,7 +6,8 @@ import { ConfidenceDial } from "./ConfidenceDial";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
-import { crowdShares, crowdReadingLabel, crowdReadingIndex } from "@/lib/crowd";
+import { crowdShares, crowdReadingLabel, crowdReadingIndex, crowdTotal } from "@/lib/crowd";
+import { putPrediction } from "@/lib/api/endpoints";
 import { categoryTitle } from "@/lib/mock";
 import { deadlineLabel, nPeople } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
@@ -21,12 +22,17 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
 
   const hadPrediction = initial !== null;
 
-  function submit() {
+  async function submit() {
     if (chosen == null) return;
     setError(false);
     setPhase("submitting");
-    // Имитация PUT /events/{id}/prediction
-    setTimeout(() => setPhase("done"), 900);
+    try {
+      await putPrediction(event.id, GRADES[chosen].grade);
+      setPhase("done");
+    } catch {
+      setError(true);
+      setPhase("edit");
+    }
   }
 
   return (
@@ -96,8 +102,20 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           />
         </section>
 
-        {/* Раскрытие мнения толпы — только после фиксации (анти-якорение) */}
-        {phase === "done" && <ConsensusReveal event={event} mine={chosen} />}
+        {/* Раскрытие мнения толпы — только после закрытия приёма (бэкенд скрывает
+            распределение до этого момента). Пока приём открыт — показываем статус. */}
+        {phase === "done" &&
+          (crowdTotal(event.crowd) > 0 ? (
+            <ConsensusReveal event={event} mine={chosen} />
+          ) : (
+            <section className="mt-6 rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/40 p-6">
+              <p className="text-sm font-600">Прогноз принят</p>
+              <p className="mt-1 text-xs text-haze-dim">
+                Мнение толпы откроется после закрытия приёма — так никто не подсматривает
+                консенсус заранее.
+              </p>
+            </section>
+          ))}
 
         {/* Действие */}
         <div className="mt-6">

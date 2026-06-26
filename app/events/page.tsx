@@ -3,16 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { TopNav } from "@/components/app/TopNav";
 import { EventCard } from "@/components/events/EventCard";
-import { CATEGORIES, fetchEvents } from "@/lib/mock";
 import { isClosingSoon } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
+import {
+  listCategories,
+  listEvents,
+  getMyPredictions,
+  getPredictionSummary,
+} from "@/lib/api/endpoints";
+import { toPredictionEvent, myGradeMap } from "@/lib/api/map";
+import type { ApiCategory } from "@/lib/api/dto";
 
 type Status = "all" | "open" | "soon" | "resolved";
 type Sort = "new" | "soon" | "active";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<PredictionEvent[] | null>(null);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [error, setError] = useState(false);
+  const [reload, setReload] = useState(0);
+
   const [cat, setCat] = useState<string>("all");
   const [status, setStatus] = useState<Status>("all");
   const [onlyMine, setOnlyMine] = useState(false);
@@ -22,13 +32,41 @@ export default function EventsPage() {
     let alive = true;
     setError(false);
     setEvents(null);
-    fetchEvents()
-      .then((e) => alive && setEvents(e))
-      .catch(() => alive && setError(true));
+    (async () => {
+      try {
+        const [cats, evs, mine] = await Promise.all([
+          listCategories(),
+          listEvents({ limit: 100 }),
+          getMyPredictions(),
+        ]);
+        const catMap = new Map((cats ?? []).map((c) => [c.id, c.slug]));
+        const grades = myGradeMap(mine);
+        // Сводка толпы доступна только после закрытия приёма — берём для resolved.
+        const resolved = (evs ?? []).filter((e) => e.status === "resolved");
+        const summaries = await Promise.all(
+          resolved.map((e) => getPredictionSummary(e.id)),
+        );
+        const sumMap = new Map(resolved.map((e, i) => [e.id, summaries[i]]));
+        const mapped = (evs ?? [])
+          .filter((e) => e.status !== "draft" && e.status !== "cancelled")
+          .map((e) =>
+            toPredictionEvent(e, catMap, {
+              summary: sumMap.get(e.id) ?? null,
+              myGrade: grades.get(e.id) ?? null,
+            }),
+          );
+        if (alive) {
+          setCategories(cats ?? []);
+          setEvents(mapped);
+        }
+      } catch {
+        if (alive) setError(true);
+      }
+    })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [reload]);
 
   const filtered = useMemo(() => {
     if (!events) return [];
@@ -43,7 +81,6 @@ export default function EventsPage() {
     list = [...list].sort((a, b) => {
       if (sort === "active") return b.forecasters - a.forecasters;
       if (sort === "new") return +new Date(b.opensAt) - +new Date(a.opensAt);
-      // soon: ближайшее закрытие первым, разрешённые в конце
       const ax = a.status === "open" ? +new Date(a.closesAt) : Infinity;
       const bx = b.status === "open" ? +new Date(b.closesAt) : Infinity;
       return ax - bx;
@@ -60,11 +97,12 @@ export default function EventsPage() {
           <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
           <p className="mt-1.5 text-sm text-slate">
             Выберите событие и скажите словами, насколько уверены. Мнение толпы скрыто,
-            пока вы не сделали прогноз.
+            пока приём прогнозов не закрыт.
           </p>
         </div>
 
         <Filters
+          categories={categories}
           cat={cat}
           setCat={setCat}
           status={status}
@@ -77,7 +115,7 @@ export default function EventsPage() {
 
         <div className="mt-6">
           {error ? (
-            <ErrorState onRetry={() => location.reload()} />
+            <ErrorState onRetry={() => setReload((n) => n + 1)} />
           ) : !events ? (
             <Grid>
               {Array.from({ length: 6 }).map((_, i) => (
@@ -85,11 +123,13 @@ export default function EventsPage() {
               ))}
             </Grid>
           ) : filtered.length === 0 ? (
-            <EmptyState onReset={() => {
-              setCat("all");
-              setStatus("all");
-              setOnlyMine(false);
-            }} />
+            <EmptyState
+              onReset={() => {
+                setCat("all");
+                setStatus("all");
+                setOnlyMine(false);
+              }}
+            />
           ) : (
             <Grid>
               {filtered.map((e) => (
@@ -104,14 +144,11 @@ export default function EventsPage() {
 }
 
 function Grid({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
-  );
+  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
 }
 
-/* ─────────────────────────── Фильтры ─────────────────────────── */
-
 function Filters(props: {
+  categories: ApiCategory[];
   cat: string;
   setCat: (v: string) => void;
   status: Status;
@@ -135,7 +172,6 @@ function Filters(props: {
 
   return (
     <div className="space-y-3">
-      {/* статусы + сорт */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Статус">
           {statuses.map((s) => (
@@ -170,12 +206,11 @@ function Filters(props: {
         </label>
       </div>
 
-      {/* категории */}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Категория">
         <Pill on={props.cat === "all"} onClick={() => props.setCat("all")}>
           Все категории
         </Pill>
-        {CATEGORIES.map((c) => (
+        {props.categories.map((c) => (
           <Pill key={c.slug} on={props.cat === c.slug} onClick={() => props.setCat(c.slug)}>
             {c.title}
           </Pill>
@@ -210,8 +245,6 @@ function Pill({
   );
 }
 
-/* ─────────────────────── Состояния ─────────────────────── */
-
 function CardSkeleton() {
   return (
     <div className="rounded-[var(--radius-card)] border border-line bg-surface p-5">
@@ -227,21 +260,8 @@ function CardSkeleton() {
   );
 }
 
-function Bar({
-  w,
-  h = "h-3",
-  className = "",
-}: {
-  w: string;
-  h?: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`${w} ${h} ${className} animate-pulse rounded bg-line`}
-      aria-hidden="true"
-    />
-  );
+function Bar({ w, h = "h-3", className = "" }: { w: string; h?: string; className?: string }) {
+  return <div className={`${w} ${h} ${className} animate-pulse rounded bg-line`} aria-hidden="true" />;
 }
 
 function EmptyState({ onReset }: { onReset: () => void }) {
@@ -266,7 +286,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     <div className="rounded-[var(--radius-card)] border border-line bg-surface py-16 text-center" role="alert">
       <p className="font-display text-lg font-500">Не удалось загрузить события</p>
       <p className="mx-auto mt-2 max-w-sm text-sm text-slate">
-        Проверьте соединение и попробуйте ещё раз.
+        Проверьте, что бэкенд запущен, и попробуйте ещё раз.
       </p>
       <button
         onClick={onRetry}

@@ -1,0 +1,93 @@
+# Локальный кластер «Оракул».
+#
+# Слой данных (Postgres + Redis) поднимается в Docker всегда:
+#   docker compose up -d
+#
+# Слой приложения (backend, worker, mock-esia) по умолчанию запускается на
+# ХОСТЕ из .venv (см. README.dev.md) — так надёжнее, когда реестр образов
+# (Docker Hub) недоступен. Когда реестр доступен, весь кластер можно поднять
+# в Docker целиком:
+#   docker compose --profile full up --build
+#
+# Бэкенд:   http://localhost:8000   Мок ЕСИА: http://localhost:9000
+# Postgres: localhost:5432          Redis:    localhost:6379
+
+x-backend-env: &backend-env
+  APP_ENV: local
+  APP_DEBUG: "true"
+  DATABASE_URL: postgresql+asyncpg://orakul:orakul@postgres:5432/orakul
+  REDIS_URL: redis://redis:6379/0
+  CORS_ALLOW_ORIGINS: http://localhost:3000
+  SECURITY_SNILS_HMAC_KEY: a69582e01b4583bfd027394f16e51aa97e5b56bdcd0f0352
+  SECURITY_FIELD_ENCRYPTION_KEY: IQT3A8X7KXgszNLMsJFZ_IWN676fvuO2Wm8_4KmfFew=
+  SECURITY_JWT_SECRET: 4d44d203176197815b60e60799ccbc507840e58e6e253af1
+  SECURITY_COOKIE_SECURE: "false"
+  ESIA_CLIENT_ID: orakul-dev
+  ESIA_REDIRECT_URI: http://localhost:3000/auth/esia/callback
+  ESIA_AUTHORIZATION_ENDPOINT: http://localhost:9000/authorize
+  ESIA_TOKEN_ENDPOINT: http://mock-esia:9000/token
+  ESIA_USERINFO_ENDPOINT: http://mock-esia:9000/userinfo
+  ESIA_REQUIRE_CONFIRMED: "true"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: orakul
+      POSTGRES_PASSWORD: orakul
+      POSTGRES_DB: orakul
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orakul -d orakul"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # ── Слой приложения в Docker (профиль full; нужен доступ к Docker Hub) ──
+  mock-esia:
+    profiles: ["full"]
+    build: ./dev/mock-esia
+    ports:
+      - "9000:9000"
+
+  backend:
+    profiles: ["full"]
+    build: ../backend
+    environment: *backend-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    profiles: ["full"]
+    build: ../backend
+    environment: *backend-env
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    command: arq app.worker.WorkerSettings
+
+volumes:
+  pgdata:

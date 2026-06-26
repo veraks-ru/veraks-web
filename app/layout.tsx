@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Unbounded, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/app/AuthProvider";
 
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic"],
@@ -45,7 +46,9 @@ export default function RootLayout({
       lang="ru"
       className={`${unbounded.variable} ${manrope.variable} ${jetbrains.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

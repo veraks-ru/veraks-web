@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShareCard } from "./ShareCard";
 import { Button } from "@/components/ui/Button";
-import { ME } from "@/lib/mock-users";
+import { useAuth } from "@/components/app/AuthProvider";
 import type { PredictionEvent } from "@/lib/types";
 
 export function ShareActions({ event }: { event: PredictionEvent }) {
+  const { me } = useAuth();
+  const username = me?.username ?? "предсказатель";
   const [url, setUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
@@ -43,7 +45,7 @@ export function ShareActions({ event }: { event: PredictionEvent }) {
 
   return (
     <div className="mx-auto max-w-xl">
-      <ShareCard event={event} username={ME} />
+      <ShareCard event={event} username={username} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         {canShare && (

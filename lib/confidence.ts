@@ -22,13 +22,18 @@ export interface GradeDef {
   pole: "no" | "mid" | "yes";
 }
 
+// Вероятности совпадают с маппингом бэкенда (0.10 … 0.90).
 export const GRADES: readonly GradeDef[] = [
-  { grade: "definitely_no", label: "Точно нет", short: "Точно нет", probability: 0.05, pole: "no" },
-  { grade: "probably_no", label: "Скорее нет", short: "Скорее нет", probability: 0.25, pole: "no" },
+  { grade: "definitely_no", label: "Точно нет", short: "Точно нет", probability: 0.1, pole: "no" },
+  { grade: "probably_no", label: "Скорее нет", short: "Скорее нет", probability: 0.3, pole: "no" },
   { grade: "fifty_fifty", label: "50 на 50", short: "50 / 50", probability: 0.5, pole: "mid" },
-  { grade: "probably_yes", label: "Скорее да", short: "Скорее да", probability: 0.75, pole: "yes" },
-  { grade: "definitely_yes", label: "Точно да", short: "Точно да", probability: 0.95, pole: "yes" },
+  { grade: "probably_yes", label: "Скорее да", short: "Скорее да", probability: 0.7, pole: "yes" },
+  { grade: "definitely_yes", label: "Точно да", short: "Точно да", probability: 0.9, pole: "yes" },
 ] as const;
+
+/** Индекс градации по заявленной вероятности (0.1→0 … 0.9→4). */
+export const gradeIndexForProbability = (p: number): number =>
+  Math.max(0, Math.min(GRADES.length - 1, Math.round((p - 0.1) / 0.2)));
 
 export const gradeByIndex = (i: number): GradeDef =>
   GRADES[Math.max(0, Math.min(GRADES.length - 1, i))];
