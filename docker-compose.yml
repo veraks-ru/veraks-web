@@ -1,13 +1,12 @@
 # Локальный кластер «Оракул».
 #
-# Слой данных (Postgres + Redis) поднимается в Docker всегда:
-#   docker compose up -d
-#
-# Слой приложения (backend, worker, mock-esia) по умолчанию запускается на
-# ХОСТЕ из .venv (см. README.dev.md) — так надёжнее, когда реестр образов
-# (Docker Hub) недоступен. Когда реестр доступен, весь кластер можно поднять
-# в Docker целиком:
+# ВЕСЬ стек в Docker (как поедет в k8s) — где доступны Docker Hub и PyPI:
 #   docker compose --profile full up --build
+#   (postgres + redis + backend + worker + mock-esia + frontend)
+#
+# Только слой данных (когда реестр образов / PyPI недоступны, напр. в песочнице):
+#   docker compose up -d            # postgres + redis
+#   далее backend/worker/mock-esia/frontend — на хосте (см. README.dev.md).
 #
 # Бэкенд:   http://localhost:8000   Мок ЕСИА: http://localhost:9000
 # Postgres: localhost:5432          Redis:    localhost:6379
@@ -88,6 +87,18 @@ services:
       redis:
         condition: service_healthy
     command: arq app.worker.WorkerSettings
+
+  frontend:
+    profiles: ["full"]
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
 
 volumes:
   pgdata:

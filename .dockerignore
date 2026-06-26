@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env*.local
+npm-debug.log*
+dev/mock-esia/__pycache__
+**/__pycache__
+*.pyc
+.DS_Store
