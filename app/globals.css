@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Dark environment (онбординг, экран прогноза) ─────────────── */
+  --color-ink: #0e1430;
+  --color-ink-2: #161f45;
+  --color-ink-3: #090d22;
+  --color-haze: #9aa3c0;
+  --color-haze-dim: #6c7392;
+
+  /* ── Light environment (лента, лидерборды, профили) ───────────── */
+  --color-paper: #f6f7fb;
+  --color-surface: #ffffff;
+  --color-graphite: #14171c;
+  --color-slate: #5a617a;
+  --color-line: #e6e8f1;
+
+  /* ── Signal + belief spectrum ─────────────────────────────────── */
+  --color-signal: #46e0c4;
+  --color-signal-deep: #16b39a;
+  --color-cool: #7c8cf8;
+  --color-warm: #f2a65a;
+
+  /* ── Type roles (значения приходят из next/font на <html>) ─────── */
+  --font-display: var(--font-unbounded), "Unbounded", system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Manrope", system-ui, sans-serif;
+  --font-mono: var(--font-jb), "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-graphite);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-signal) 32%, transparent);
+    color: var(--color-graphite);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Сумеречный фон тёмной среды: «орбита» из мягких свечений */
+  .bg-oracle {
+    background-color: var(--color-ink);
+    background-image:
+      radial-gradient(
+        60rem 40rem at 78% -8%,
+        color-mix(in srgb, var(--color-signal) 14%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        46rem 46rem at 8% 18%,
+        color-mix(in srgb, var(--color-cool) 16%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        40rem 30rem at 50% 120%,
+        color-mix(in srgb, var(--color-warm) 9%, transparent),
+        transparent 60%
+      );
+  }
+
+  .glow-signal {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-signal) 55%, transparent),
+      0 14px 40px -16px color-mix(in srgb, var(--color-signal) 70%, transparent);
+  }
+
+  /* Тонкая «звёздная» крупка для глубины — почти незаметна */
+  .grain {
+    position: relative;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: radial-gradient(
+      rgba(255, 255, 255, 0.5) 0.5px,
+      transparent 0.5px
+    );
+    background-size: 3px 3px;
+    mask-image: radial-gradient(70% 70% at 50% 30%, black, transparent 75%);
+  }
+
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+  .animate-drift {
+    animation: drift 7s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .animate-pulse-soft {
+    animation: pulse-soft 3.2s ease-in-out infinite;
+  }
+}
