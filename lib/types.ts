@@ -43,3 +43,53 @@ export interface PredictionEvent {
   resolvedAt?: string;
   sourceReference?: string;
 }
+
+/* ───────────────────── Профиль и рейтинги ───────────────────── */
+
+/** Один бакет калибровки = одна градация. actual = nYes / nResolved. */
+export interface CalibrationBucket {
+  gradeIndex: number;
+  nResolved: number;
+  nYes: number;
+}
+
+export interface CategoryStat {
+  categorySlug: string;
+  meanBrier: number;
+  nResolved: number;
+}
+
+export interface HistoryItem {
+  eventSlug: string;
+  title: string;
+  categorySlug: string;
+  gradeIndex: number;
+  outcome: boolean;
+  brier: number;
+  resolvedAt: string;
+}
+
+export interface UserProfile {
+  username: string;
+  displayName: string;
+  joinedAt: string;
+  meanBrier: number;
+  nPredictions: number;
+  nResolved: number;
+  globalRank: number;
+  totalRanked: number;
+  calibration: CalibrationBucket[];
+  categories: CategoryStat[];
+  history: HistoryItem[];
+}
+
+export type LeaderboardScope = "global" | "category" | "season";
+
+export interface LeaderboardRow {
+  rank: number;
+  username: string;
+  displayName: string;
+  meanBrier: number;
+  nResolved: number;
+  isMe?: boolean;
+}
