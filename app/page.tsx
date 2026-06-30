@@ -3,7 +3,6 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { OracleArc } from "@/components/brand/OracleArc";
 import { ButtonLink } from "@/components/ui/Button";
 import { GRADES } from "@/lib/confidence";
-import { TARIFFS, fmtRub } from "@/lib/pricing";
 
 export default function HomePage() {
   return (
@@ -11,7 +10,6 @@ export default function HomePage() {
       <div className="grain">
         <SiteNav />
         <Hero />
-        <Plans />
         <Loop />
         <SiteFooter />
       </div>
@@ -95,54 +93,6 @@ function Hero() {
             Ваше показание: <span className="font-600 text-warm">Скорее да</span>
           </p>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function Plans() {
-  return (
-    <section className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl leading-snug font-600 sm:text-3xl">
-            Смотреть — бесплатно. Голосовать — по подписке.
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-haze">
-            Лента, консенсус толпы и публичные трек-рекорды открыты всем. Чтобы делать
-            собственные прогнозы и расти в рейтинге, нужна активная подписка.
-          </p>
-        </div>
-        <Link href="/pricing" className="text-sm font-700 text-signal underline-offset-2 hover:underline">
-          Все тарифы →
-        </Link>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TARIFFS.map((t) => (
-          <div
-            key={t.plan}
-            className={`rounded-[var(--radius-card)] border p-5 ${
-              t.popular
-                ? "border-[color:var(--color-signal)]/40 bg-[color:var(--color-signal)]/[0.06]"
-                : "border-[color:var(--color-edge)]"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <p className="font-display text-lg font-600">{t.title}</p>
-              {t.popular && (
-                <span className="rounded-full bg-signal px-2 py-0.5 text-[0.6rem] font-700 tracking-wide text-ink-3 uppercase">
-                  Хит
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-haze-dim">{t.period}</p>
-            <p className="mt-4 font-display text-2xl font-700">
-              {fmtRub(t.priceRub)}
-            </p>
-            <p className="mt-3 text-sm leading-snug text-haze">{t.note}</p>
-          </div>
-        ))}
       </div>
     </section>
   );
