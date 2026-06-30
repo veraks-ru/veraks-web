@@ -43,6 +43,14 @@ export const closeEvent = (id: string) =>
 export const cancelEvent = (id: string) =>
   apiFetch<ApiEvent>(`/events/${id}/cancel`, { method: "POST" });
 
+/* ── Модерация пользовательских предложений (editor/admin) ── */
+
+export const approveEvent = (id: string) =>
+  apiFetch<ApiEvent>(`/events/${id}/approve`, { method: "POST" });
+
+export const rejectEvent = (id: string, reason: string) =>
+  apiFetch<ApiEvent>(`/events/${id}/reject`, { method: "POST", body: { reason } });
+
 export const createCategory = (body: {
   slug: string;
   title: string;

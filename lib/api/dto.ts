@@ -4,6 +4,7 @@
 import type { ConfidenceGrade } from "@/lib/confidence";
 
 export type ApiEventStatus =
+  | "proposed"
   | "draft"
   | "open"
   | "closed"

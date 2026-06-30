@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { EventCard } from "@/components/events/EventCard";
 import { isClosingSoon } from "@/lib/format";
@@ -91,12 +92,20 @@ export default function EventsPage() {
       <TopNav active="/events" />
 
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
-          <p className="mt-1.5 text-sm text-slate">
-            Смотрите, как голосует толпа, и делайте свой прогноз словами. Голосование — по
-            подписке; смотреть консенсус можно бесплатно.
-          </p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
+            <p className="mt-1.5 max-w-xl text-sm text-slate">
+              Смотрите, как голосует толпа, и делайте свой прогноз словами. Голосование — по
+              подписке; смотреть консенсус можно бесплатно.
+            </p>
+          </div>
+          <Link
+            href="/events/propose"
+            className="shrink-0 rounded-full border border-line bg-surface px-4 py-2 text-sm font-600 text-graphite hover:bg-paper"
+          >
+            Предложить событие
+          </Link>
         </div>
 
         <Filters

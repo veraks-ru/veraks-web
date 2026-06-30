@@ -36,7 +36,8 @@ export default function EventPage() {
     (async () => {
       try {
         const [ev, cats] = await Promise.all([getEvent(id), listCategories()]);
-        if (!ev) {
+        if (!ev || ev.status === "proposed") {
+          // Предложения на модерации публично не показываем.
           if (alive) setState({ kind: "notfound" });
           return;
         }

@@ -1,6 +1,7 @@
 // Типизированные вызовы эндпоинтов бэкенда.
 
 import { apiFetch } from "./client";
+import type { EventInput } from "./admin";
 import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
   ApiCalibration,
@@ -116,3 +117,8 @@ export function isSubscriptionActive(s: ApiSubscription | null): boolean {
   if (!s || s.status !== "active" || !s.current_period_end) return false;
   return new Date(s.current_period_end).getTime() > Date.now();
 }
+
+/* ── Предложить событие (подписчик; уходит на модерацию) ── */
+
+export const proposeEvent = (body: EventInput) =>
+  apiFetch<ApiEvent>("/events/propose", { method: "POST", body });

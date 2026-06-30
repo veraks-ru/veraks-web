@@ -12,7 +12,8 @@ import type {
 
 export function mapStatus(s: ApiEventStatus): EventStatus {
   if (s === "cancelled") return "annulled";
-  if (s === "draft") return "closed";
+  // draft/proposed публично не показываются; на всякий случай → closed.
+  if (s === "draft" || s === "proposed") return "closed";
   return s;
 }
 

@@ -15,6 +15,7 @@ import {
 import type { ApiDispute, ApiEvent, ApiResolution } from "@/lib/api/dto";
 
 const STATUS_LABEL: Record<string, string> = {
+  proposed: "На модерации",
   draft: "Черновик", open: "Открыто", closed: "Приём закрыт",
   resolving: "Разрешается", resolved: "Разрешено", disputed: "Оспорено", cancelled: "Отменено",
 };

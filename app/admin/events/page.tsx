@@ -5,10 +5,17 @@ import Link from "next/link";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
 import { listCategories, listEvents, listSeasons } from "@/lib/api/endpoints";
-import { createEvent, createCategory, type EventInput } from "@/lib/api/admin";
+import {
+  createEvent,
+  createCategory,
+  approveEvent,
+  rejectEvent,
+  type EventInput,
+} from "@/lib/api/admin";
 import type { ApiCategory, ApiEvent, ApiSeason } from "@/lib/api/dto";
 
 const STATUS_LABEL: Record<string, string> = {
+  proposed: "На модерации",
   draft: "Черновик",
   open: "Открыто",
   closed: "Приём закрыт",
@@ -25,18 +32,23 @@ const dayMs = 86_400_000;
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<ApiEvent[] | null>(null);
+  const [proposed, setProposed] = useState<ApiEvent[]>([]);
   const [cats, setCats] = useState<ApiCategory[]>([]);
   const [seasons, setSeasons] = useState<ApiSeason[]>([]);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    Promise.all([listEvents({ limit: 200 }), listCategories(), listSeasons()]).then(
-      ([e, c, s]) => {
-        setEvents(e ?? []);
-        setCats(c ?? []);
-        setSeasons(s?.items ?? []);
-      },
-    );
+    Promise.all([
+      listEvents({ limit: 200 }),
+      listEvents({ status: "proposed", limit: 200 }),
+      listCategories(),
+      listSeasons(),
+    ]).then(([e, p, c, s]) => {
+      setEvents(e ?? []);
+      setProposed(p ?? []);
+      setCats(c ?? []);
+      setSeasons(s?.items ?? []);
+    });
   }, [reload]);
 
   const catTitle = useMemo(() => new Map(cats.map((c) => [c.id, c.title])), [cats]);
@@ -48,6 +60,7 @@ export default function AdminEventsPage() {
         <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
       </div>
 
+      <Moderation proposed={proposed} catTitle={catTitle} onDone={refresh} />
       <CreateEventForm cats={cats} seasons={seasons} onCreated={refresh} />
       <CreateCategoryForm onCreated={refresh} />
 
@@ -97,6 +110,76 @@ export default function AdminEventsPage() {
         )}
       </Panel>
     </div>
+  );
+}
+
+function Moderation({
+  proposed,
+  catTitle,
+  onDone,
+}: {
+  proposed: ApiEvent[];
+  catTitle: Map<string, string>;
+  onDone: () => void;
+}) {
+  return (
+    <Panel
+      title={`На модерации${proposed.length ? ` · ${proposed.length}` : ""}`}
+      desc="Предложения событий от участников — одобрить или отклонить"
+    >
+      {proposed.length === 0 ? (
+        <p className="py-2 text-sm text-slate">Новых предложений нет.</p>
+      ) : (
+        <ul className="space-y-3">
+          {proposed.map((ev) => (
+            <ModRow key={ev.id} ev={ev} catTitle={catTitle} onDone={onDone} />
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+function ModRow({
+  ev,
+  catTitle,
+  onDone,
+}: {
+  ev: ApiEvent;
+  catTitle: Map<string, string>;
+  onDone: () => void;
+}) {
+  const act = useAction();
+  return (
+    <li className="rounded-xl border border-line p-3.5">
+      <p className="font-500">{ev.title}</p>
+      <p className="mt-0.5 text-xs text-slate">
+        {catTitle.get(ev.category_id) ?? "—"} · предложено участником
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Btn
+          tone="primary"
+          loading={act.loading}
+          onClick={async () => {
+            const r = await act.run(() => approveEvent(ev.id), "Одобрено — стало черновиком");
+            if (r) onDone();
+          }}
+        >
+          Одобрить
+        </Btn>
+        <Btn
+          tone="danger"
+          loading={act.loading}
+          onClick={async () => {
+            const r = await act.run(() => rejectEvent(ev.id, "не подходит"), "Отклонено");
+            if (r) onDone();
+          }}
+        >
+          Отклонить
+        </Btn>
+      </div>
+      <Notice error={act.error} ok={act.okMsg} />
+    </li>
   );
 }
 
