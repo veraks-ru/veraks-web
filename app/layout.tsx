@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
-import { Unbounded, Manrope, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/components/app/AuthProvider";
 
-const unbounded = Unbounded({
-  subsets: ["latin", "cyrillic"],
-  weight: ["500", "600", "700"],
+// Самохостинг шрифтов (variable TTF, латиница + кириллица): сборка не ходит в
+// сеть за Google Fonts — образ собирается оффлайн (важно для CI/k8s).
+const unbounded = localFont({
+  src: "./fonts/unbounded.ttf",
+  weight: "500 700",
   variable: "--font-unbounded",
   display: "swap",
 });
 
-const manrope = Manrope({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+const manrope = localFont({
+  src: "./fonts/manrope.ttf",
+  weight: "400 700",
   variable: "--font-manrope",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600"],
+const jetbrains = localFont({
+  src: "./fonts/jetbrains-mono.ttf",
+  weight: "400 600",
   variable: "--font-jb",
   display: "swap",
 });

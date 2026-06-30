@@ -41,16 +41,26 @@ export function TopNav({ active }: { active?: string }) {
         {loading ? (
           <span className="size-8 animate-pulse rounded-full bg-line" aria-hidden />
         ) : me ? (
-          <Link
-            href={`/u/${me.username}`}
-            className="flex items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper"
-            aria-label="Мой профиль"
-          >
+          <div className="flex items-center gap-2">
+            {["editor", "arbiter", "admin"].includes(me.role) && (
+              <Link
+                href="/admin"
+                className="hidden rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite sm:inline"
+              >
+                Админка
+              </Link>
+            )}
+            <Link
+              href={`/u/${me.username}`}
+              className="flex items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper"
+              aria-label="Мой профиль"
+            >
             <span className="flex size-8 items-center justify-center rounded-full bg-graphite text-sm font-700 text-white">
               {(me.display_name || me.username)[0]?.toUpperCase()}
             </span>
-            <span className="hidden text-sm font-600 sm:inline">@{me.username}</span>
-          </Link>
+              <span className="hidden text-sm font-600 sm:inline">@{me.username}</span>
+            </Link>
+          </div>
         ) : (
           <Link
             href="/join"

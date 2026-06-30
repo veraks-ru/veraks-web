@@ -27,6 +27,9 @@ x-backend-env: &backend-env
   ESIA_TOKEN_ENDPOINT: http://mock-esia:9000/token
   ESIA_USERINFO_ENDPOINT: http://mock-esia:9000/userinfo
   ESIA_REQUIRE_CONFIRMED: "true"
+  # Локально окно оспаривания = 0ч: «Разрешить → Посчитать» в админке срабатывает
+  # сразу (в проде окно реальное, по умолчанию 72ч).
+  RESOLUTIONS_DISPUTE_WINDOW_HOURS: "0"
 
 services:
   postgres:

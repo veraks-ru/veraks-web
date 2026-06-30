@@ -139,3 +139,55 @@ export interface ApiSeason {
   created_at: string;
   updated_at: string;
 }
+
+export interface ApiDispute {
+  id: string;
+  event_id: string;
+  resolution_id: string;
+  raised_by: string;
+  reason: string;
+  evidence: string;
+  status: "open" | "under_review" | "accepted" | "rejected";
+  decided_by: string | null;
+  decision_notes: string;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface ApiPrizeFund {
+  id: string;
+  sponsor_name: string;
+  season_id: string | null;
+  committed_kopecks: number;
+  deposited_kopecks: number;
+  balance_kopecks: number;
+  status: "announced" | "funded" | "distributing" | "closed";
+}
+
+export interface ApiPayout {
+  id: string;
+  user_id: string;
+  prize_fund_id: string;
+  amount_kopecks: number;
+  tax_withheld_kopecks: number;
+  status: "pending" | "approved" | "processing" | "paid" | "failed";
+  created_by: string;
+  approved_by: string | null;
+  ledger_transaction_id: string | null;
+}
+
+export interface ApiSeasonPrizeFund {
+  season_slug: string;
+  funds: ApiPrizeFund[];
+  payouts: ApiPayout[];
+}
+
+export interface LeagueConfigInput {
+  gradation_map: number[];
+  n_min: number;
+  c_min: number;
+  w_min: number;
+  m_per_category: number;
+  k_shrink: number;
+  min_predictors: number;
+}
