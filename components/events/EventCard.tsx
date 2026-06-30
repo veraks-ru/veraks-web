@@ -54,43 +54,27 @@ export function EventCard({ event }: { event: PredictionEvent }) {
         )}
       </p>
 
-      {/* Состояние нижней части зависит от того, прогнозировал ли пользователь */}
+      {/* Текущий консенсус виден всем — в том числе пока приём открыт. */}
       <div className="mt-4 flex-1">
-        {isOpen && !predicted && (
-          <LockedConsensus />
-        )}
-
-        {predicted && !isResolved && (
-          <div className="rounded-xl bg-paper p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate">Ваше показание</span>
-              <GradePill grade={event.myGrade!} />
-            </div>
-            {crowdTotal(event.crowd) > 0 ? (
-              <div className="mt-2.5">
-                <MiniConsensus crowd={event.crowd} mine={event.myGrade} />
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-slate">
-                Прогноз учтён. Мнение толпы откроется после закрытия приёма.
-              </p>
-            )}
-          </div>
-        )}
-
-        {isResolved && (
-          <div className="rounded-xl bg-paper p-3.5">
+        <div className="rounded-xl bg-paper p-3.5">
+          {(predicted || isResolved) && (
             <div className="mb-2.5 flex items-center justify-between">
-              <span className="text-xs text-slate">Вы сказали</span>
+              <span className="text-xs text-slate">
+                {isResolved ? "Вы сказали" : "Ваше показание"}
+              </span>
               {event.myGrade ? (
                 <GradePill grade={event.myGrade} />
               ) : (
-                <span className="text-sm text-slate">не прогнозировали</span>
+                <span className="text-sm text-slate">не голосовали</span>
               )}
             </div>
+          )}
+          {crowdTotal(event.crowd) > 0 ? (
             <MiniConsensus crowd={event.crowd} mine={event.myGrade} />
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-slate">Пока никто не голосовал — будьте первым.</p>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">
@@ -120,31 +104,10 @@ export function EventCard({ event }: { event: PredictionEvent }) {
   );
 }
 
-/** Анти-якорение: до прогноза мнение толпы скрыто. */
-function LockedConsensus() {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-dashed border-line bg-paper/60 p-3.5">
-      <LockIcon className="size-5 shrink-0 text-slate" />
-      <p className="text-xs leading-snug text-slate">
-        Мнение толпы скрыто, чтобы не влиять на вас. Откроется после вашего прогноза.
-      </p>
-    </div>
-  );
-}
-
 function Arrow() {
   return (
     <svg viewBox="0 0 16 16" className="size-4 transition-all" fill="none" aria-hidden="true">
       <path d="M3 8h9m0 0-3.5-3.5M12 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <rect x="5" y="10.5" width="14" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }

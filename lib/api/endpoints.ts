@@ -14,6 +14,7 @@ import type {
   ApiPublicProfile,
   ApiResolution,
   ApiSeason,
+  ApiSubscription,
   ApiUserRef,
 } from "./dto";
 
@@ -98,3 +99,20 @@ export const lookupUser = (userId: string) =>
 
 export const listSeasons = () =>
   apiFetch<{ items: ApiSeason[] }>("/seasons", { allow: [404] });
+
+/* ── Подписка ── */
+
+export const getMySubscription = () =>
+  apiFetch<ApiSubscription>("/billing/subscriptions/me", { allow: [401, 404] });
+
+export const startSubscription = (plan: string) =>
+  apiFetch<{ subscription: ApiSubscription; confirmation_url: string }>(
+    "/billing/subscriptions",
+    { method: "POST", body: { plan } },
+  );
+
+/** Активна ли подписка прямо сейчас. */
+export function isSubscriptionActive(s: ApiSubscription | null): boolean {
+  if (!s || s.status !== "active" || !s.current_period_end) return false;
+  return new Date(s.current_period_end).getTime() > Date.now();
+}

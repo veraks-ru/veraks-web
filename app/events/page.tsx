@@ -41,20 +41,18 @@ export default function EventsPage() {
         ]);
         const catMap = new Map((cats ?? []).map((c) => [c.id, c.slug]));
         const grades = myGradeMap(mine);
-        // Сводка толпы доступна только после закрытия приёма — берём для resolved.
-        const resolved = (evs ?? []).filter((e) => e.status === "resolved");
-        const summaries = await Promise.all(
-          resolved.map((e) => getPredictionSummary(e.id)),
+        // Консенсус виден для всех событий (в т.ч. открытых).
+        const list = (evs ?? []).filter(
+          (e) => e.status !== "draft" && e.status !== "cancelled",
         );
-        const sumMap = new Map(resolved.map((e, i) => [e.id, summaries[i]]));
-        const mapped = (evs ?? [])
-          .filter((e) => e.status !== "draft" && e.status !== "cancelled")
-          .map((e) =>
-            toPredictionEvent(e, catMap, {
-              summary: sumMap.get(e.id) ?? null,
-              myGrade: grades.get(e.id) ?? null,
-            }),
-          );
+        const summaries = await Promise.all(list.map((e) => getPredictionSummary(e.id)));
+        const sumMap = new Map(list.map((e, i) => [e.id, summaries[i]]));
+        const mapped = list.map((e) =>
+          toPredictionEvent(e, catMap, {
+            summary: sumMap.get(e.id) ?? null,
+            myGrade: grades.get(e.id) ?? null,
+          }),
+        );
         if (alive) {
           setCategories(cats ?? []);
           setEvents(mapped);
@@ -96,8 +94,8 @@ export default function EventsPage() {
         <div className="mb-6">
           <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
           <p className="mt-1.5 text-sm text-slate">
-            Выберите событие и скажите словами, насколько уверены. Мнение толпы скрыто,
-            пока приём прогнозов не закрыт.
+            Смотрите, как голосует толпа, и делайте свой прогноз словами. Голосование — по
+            подписке; смотреть консенсус можно бесплатно.
           </p>
         </div>
 

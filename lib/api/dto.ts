@@ -182,6 +182,16 @@ export interface ApiSeasonPrizeFund {
   payouts: ApiPayout[];
 }
 
+export interface ApiSubscription {
+  id: string;
+  user_id: string;
+  plan: string;
+  price_kopecks: number;
+  provider: string;
+  status: "incomplete" | "active" | "past_due" | "canceled" | "expired";
+  current_period_end: string | null;
+}
+
 export interface LeagueConfigInput {
   gradation_map: number[];
   n_min: number;

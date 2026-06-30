@@ -1,4 +1,4 @@
-// Тонкий типизированный HTTP-клиент к бэкенду «Оракул».
+// Тонкий типизированный HTTP-клиент к бэкенду «Веракс».
 // Все запросы идут с credentials: cookie-сессия (access/refresh) — httpOnly.
 
 export const API_BASE =

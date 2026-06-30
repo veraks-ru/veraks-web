@@ -42,9 +42,7 @@ export default function EventPage() {
         }
         const catMap = new Map((cats ?? []).map((c) => [c.id, c.slug]));
         const [summary, mine] = await Promise.all([
-          ev.status === "resolved" || ev.status === "closed" || ev.status === "resolving"
-            ? getPredictionSummary(ev.id)
-            : Promise.resolve(null),
+          getPredictionSummary(ev.id),
           getMyPrediction(ev.id),
         ]);
         const mapped = toPredictionEvent(ev, catMap, {

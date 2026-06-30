@@ -35,7 +35,7 @@ export function ShareCard({
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 font-display text-sm font-600 tracking-[0.14em]">
             <span className="size-2 rounded-full bg-signal" />
-            ОРАКУЛ
+            ВЕРАКС
           </span>
           <span className="text-xs font-600 tracking-wide text-haze-dim uppercase">
             результат прогноза

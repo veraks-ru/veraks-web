@@ -18,7 +18,7 @@ export function Wordmark({
   return (
     <Link
       href={href}
-      aria-label="Оракул — на главную"
+      aria-label="Веракс — на главную"
       className={`group inline-flex items-center gap-2.5 ${text}`}
     >
       <svg width="30" height="22" viewBox="0 0 30 22" fill="none" aria-hidden="true">
@@ -35,7 +35,7 @@ export function Wordmark({
         <circle cx="21.4" cy="11.5" r="6" fill="var(--color-signal)" opacity="0.18" />
       </svg>
       <span className="font-display text-[1.05rem] font-600 tracking-[0.14em]">
-        ОРАКУЛ
+        ВЕРАКС
       </span>
     </Link>
   );

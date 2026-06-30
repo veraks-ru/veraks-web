@@ -108,7 +108,7 @@ function FundsPanel({ fund, seasonId, isAdmin, onDone }: {
   const dep = useAction();
 
   return (
-    <Panel title="Фонды сезона" desc="Спонсорские средства (касса PRIZE, отдельно от операционной)">
+    <Panel title="Фонды сезона" desc="Средства фондов и их остаток">
       {fund && fund.funds.length > 0 ? (
         <ul className="mb-5 space-y-2">
           {fund.funds.map((f: ApiPrizeFund) => (
@@ -166,7 +166,7 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
   const row = useAction();
 
   return (
-    <Panel title="Выплаты" desc="Maker-checker: создаёт один admin, подтверждает — другой">
+    <Panel title="Выплаты" desc="Создаёт один администратор, подтверждает — другой">
       {payouts.length > 0 ? (
         <ul className="mb-5 space-y-2">
           {payouts.map((p) => (

@@ -277,9 +277,6 @@ export default function ProfilePage() {
           </Card>
         </section>
 
-        <p className="mt-8 text-center text-xs text-slate">
-          Публично — только псевдоним и статистика прогнозов. Реальное имя не раскрывается.
-        </p>
       </main>
     </div>
   );

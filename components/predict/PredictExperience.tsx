@@ -3,18 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ConfidenceDial } from "./ConfidenceDial";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdReadingLabel, crowdReadingIndex, crowdTotal } from "@/lib/crowd";
 import { putPrediction } from "@/lib/api/endpoints";
 import { categoryTitle } from "@/lib/mock";
 import { deadlineLabel, nPeople } from "@/lib/format";
+import { useAuth } from "@/components/app/AuthProvider";
 import type { PredictionEvent } from "@/lib/types";
 
 type Phase = "edit" | "submitting" | "done";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
+  const { me, subscribed } = useAuth();
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
   const [chosen, setChosen] = useState<number | null>(initial);
   const [phase, setPhase] = useState<Phase>(event.myGrade ? "done" : "edit");
@@ -102,24 +104,26 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           />
         </section>
 
-        {/* Раскрытие мнения толпы — только после закрытия приёма (бэкенд скрывает
-            распределение до этого момента). Пока приём открыт — показываем статус. */}
-        {phase === "done" &&
-          (crowdTotal(event.crowd) > 0 ? (
-            <ConsensusReveal event={event} mine={chosen} />
-          ) : (
-            <section className="mt-6 rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/40 p-6">
-              <p className="text-sm font-600">Прогноз принят</p>
-              <p className="mt-1 text-xs text-haze-dim">
-                Мнение толпы откроется после закрытия приёма — так никто не подсматривает
-                консенсус заранее.
-              </p>
-            </section>
-          ))}
+        {/* Текущий консенсус толпы — виден всегда. */}
+        {crowdTotal(event.crowd) > 0 && <ConsensusReveal event={event} mine={chosen} />}
 
-        {/* Действие */}
+        {/* Действие — гейт по входу и подписке */}
         <div className="mt-6">
-          {phase === "done" ? (
+          {!me ? (
+            <GatePanel
+              title="Войдите, чтобы голосовать"
+              note="Смотреть консенсус можно без входа. Чтобы сделать свой прогноз — войдите."
+              cta="Войти через Госуслуги"
+              href="/join"
+            />
+          ) : !subscribed ? (
+            <GatePanel
+              title="Голосование — по подписке"
+              note="Смотреть площадку бесплатно. Чтобы голосовать и расти в рейтинге, оформите подписку от 99 ₽."
+              cta="Выбрать тариф"
+              href="/pricing"
+            />
+          ) : phase === "done" ? (
             <div className="flex flex-col items-center gap-3">
               <p className="flex items-center gap-2 text-sm font-600 text-signal">
                 <CheckBadge className="size-5" />
@@ -159,6 +163,28 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
         </div>
       </div>
     </main>
+  );
+}
+
+function GatePanel({
+  title,
+  note,
+  cta,
+  href,
+}: {
+  title: string;
+  note: string;
+  cta: string;
+  href: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/50 p-6 text-center">
+      <p className="font-display text-lg font-600">{title}</p>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-haze">{note}</p>
+      <ButtonLink href={href} variant="signal" size="lg" className="mt-5 w-full">
+        {cta}
+      </ButtonLink>
+    </div>
   );
 }
 
@@ -256,9 +282,9 @@ function ConsensusReveal({
 
   return (
     <section className="mt-6 rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/40 p-6">
-      <p className="text-sm font-600">Теперь видно мнение толпы</p>
+      <p className="text-sm font-600">Как голосует толпа</p>
       <p className="mt-1 text-xs text-haze-dim">
-        Распределение было скрыто, пока вы не сделали прогноз.
+        Текущее распределение прогнозов по этому событию.
       </p>
 
       <div className="mt-5 flex items-end gap-2" aria-hidden="true">

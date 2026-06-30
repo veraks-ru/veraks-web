@@ -1,11 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { getMe, logout as apiLogout } from "@/lib/api/endpoints";
+import {
+  getMe,
+  getMySubscription,
+  isSubscriptionActive,
+  logout as apiLogout,
+} from "@/lib/api/endpoints";
 import type { ApiMe } from "@/lib/api/dto";
 
 interface AuthState {
   me: ApiMe | null;
+  subscribed: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -13,6 +19,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState>({
   me: null,
+  subscribed: false,
   loading: true,
   refresh: async () => {},
   signOut: async () => {},
@@ -20,13 +27,22 @@ const AuthContext = createContext<AuthState>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<ApiMe | null>(null);
+  const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      setMe(await getMe());
+      const user = await getMe();
+      setMe(user);
+      if (user) {
+        const sub = await getMySubscription();
+        setSubscribed(isSubscriptionActive(sub));
+      } else {
+        setSubscribed(false);
+      }
     } catch {
       setMe(null);
+      setSubscribed(false);
     } finally {
       setLoading(false);
     }
@@ -39,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* всё равно чистим состояние */
     }
     setMe(null);
+    setSubscribed(false);
   }, []);
 
   useEffect(() => {
@@ -46,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   return (
-    <AuthContext.Provider value={{ me, loading, refresh, signOut }}>
+    <AuthContext.Provider value={{ me, subscribed, loading, refresh, signOut }}>
       {children}
     </AuthContext.Provider>
   );

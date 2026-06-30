@@ -19,12 +19,12 @@ export function ShareActions({ event }: { event: PredictionEvent }) {
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
   }, [event.slug]);
 
-  const shareText = `Мой прогноз на «${event.title}» — проверь свой на Оракуле`;
+  const shareText = `Мой прогноз на «${event.title}» — проверь свой на Вераксе`;
 
   async function share() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Оракул", text: shareText, url });
+        await navigator.share({ title: "Веракс", text: shareText, url });
       } else {
         await copy();
       }

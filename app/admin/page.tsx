@@ -63,7 +63,7 @@ export default function AdminDashboard() {
                 Открыть сезоны →
               </Link>
             </Panel>
-            <Panel title="Призовой фонд" desc="Спонсорские фонды и выплаты (maker-checker)">
+            <Panel title="Призовой фонд" desc="Фонды и выплаты победителям">
               <Link href="/admin/prizes" className="text-sm font-700 text-[color:var(--color-signal-deep)] hover:underline">
                 Открыть фонд →
               </Link>

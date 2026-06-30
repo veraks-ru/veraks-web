@@ -136,7 +136,7 @@ function SeasonBanner() {
         <div>
           <p className="font-display text-lg font-600">Сезон 2026 · II квартал</p>
           <p className="mt-0.5 text-sm text-slate">
-            Зачёт по пулу событий сезона. Призовой фонд — от спонсора, не из взносов.
+            Зачёт по пулу событий сезона.
           </p>
         </div>
         <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">

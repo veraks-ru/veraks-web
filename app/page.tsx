@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { OracleArc } from "@/components/brand/OracleArc";
 import { ButtonLink } from "@/components/ui/Button";
 import { GRADES } from "@/lib/confidence";
+import { TARIFFS, fmtRub } from "@/lib/pricing";
 
 export default function HomePage() {
   return (
@@ -9,7 +11,7 @@ export default function HomePage() {
       <div className="grain">
         <SiteNav />
         <Hero />
-        <Positioning />
+        <Plans />
         <Loop />
         <SiteFooter />
       </div>
@@ -25,6 +27,9 @@ function SiteNav() {
         <ButtonLink href="/events" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
           Смотреть события
         </ButtonLink>
+        <ButtonLink href="/pricing" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
+          Тарифы
+        </ButtonLink>
         <ButtonLink href="/join" variant="signal" size="md">
           Войти
         </ButtonLink>
@@ -35,7 +40,7 @@ function SiteNav() {
 
 function Hero() {
   return (
-    <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-16 lg:pb-28">
+    <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-16 lg:pb-24">
       <div>
         <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[color:var(--color-edge)] px-3.5 py-1.5 text-xs font-500 tracking-wide text-haze">
           <span className="size-1.5 rounded-full bg-signal animate-pulse-soft" />
@@ -50,23 +55,25 @@ function Hero() {
 
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-haze text-pretty">
           Прогнозируйте исходы реальных событий — словами, а не процентами. Каждое
-          предсказание фиксируется, разрешается по заранее заданному источнику и
-          оценивается метрикой, которая наказывает уверенные ошибки и награждает
-          честную калибровку. Ваша точность становится публичным, накапливаемым активом.
+          предсказание фиксируется, разрешается по источнику и оценивается. Ваша точность
+          становится публичным, накапливаемым трек-рекордом.
         </p>
 
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink href="/join" variant="signal" size="lg">
-            Войти через Госуслуги
+          <ButtonLink href="/events" variant="signal" size="lg">
+            Смотреть события
           </ButtonLink>
-          <ButtonLink href="/events" variant="ghost-dark" size="lg">
-            Сначала посмотреть события
+          <ButtonLink href="/pricing" variant="ghost-dark" size="lg">
+            Тарифы для голосования
           </ButtonLink>
         </div>
 
         <p className="mt-5 text-sm text-haze-dim">
-          Участие бесплатное. Не ставки, не тотализатор, не лотерея — банка из взносов
-          здесь нет.
+          Смотреть консенсус и трек-рекорды — бесплатно. Чтобы голосовать самому, нужна
+          подписка от 99 ₽.{" "}
+          <Link href="/pricing" className="text-signal underline-offset-2 hover:underline">
+            Тарифы →
+          </Link>
         </p>
       </div>
 
@@ -93,49 +100,49 @@ function Hero() {
   );
 }
 
-function Positioning() {
-  const is = [
-    "Соревнование в точности прогнозов",
-    "Бесплатное участие и публичный трек-рекорд",
-    "Призовой фонд из спонсорских средств",
-    "Публичный конкурс по гл. 57 ГК РФ",
-  ];
-  const isNot = [
-    "Букмекерская контора и тотализатор",
-    "Азартная игра или пари на деньги",
-    "Лотерея с розыгрышем банка из взносов",
-    "Финансовый инструмент под лицензией ЦБ",
-  ];
-
+function Plans() {
   return (
     <section className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-[var(--radius-card)] border border-[color:var(--color-signal)]/30 bg-[color:var(--color-signal)]/[0.06] p-7">
-          <h2 className="mb-5 font-display text-sm font-600 tracking-[0.2em] text-signal uppercase">
-            Это
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-2xl leading-snug font-600 sm:text-3xl">
+            Смотреть — бесплатно. Голосовать — по подписке.
           </h2>
-          <ul className="space-y-3.5">
-            {is.map((t) => (
-              <li key={t} className="flex gap-3 text-[0.97rem] leading-snug text-white/90">
-                <CheckIcon className="mt-0.5 size-5 shrink-0 text-signal" />
-                {t}
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-haze">
+            Лента, консенсус толпы и публичные трек-рекорды открыты всем. Чтобы делать
+            собственные прогнозы и расти в рейтинге, нужна активная подписка.
+          </p>
         </div>
-        <div className="rounded-[var(--radius-card)] border border-[color:var(--color-edge)] p-7">
-          <h2 className="mb-5 font-display text-sm font-600 tracking-[0.2em] text-haze-dim uppercase">
-            Это не
-          </h2>
-          <ul className="space-y-3.5">
-            {isNot.map((t) => (
-              <li key={t} className="flex gap-3 text-[0.97rem] leading-snug text-haze">
-                <CrossIcon className="mt-0.5 size-5 shrink-0 text-haze-dim" />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <Link href="/pricing" className="text-sm font-700 text-signal underline-offset-2 hover:underline">
+          Все тарифы →
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {TARIFFS.map((t) => (
+          <div
+            key={t.plan}
+            className={`rounded-[var(--radius-card)] border p-5 ${
+              t.popular
+                ? "border-[color:var(--color-signal)]/40 bg-[color:var(--color-signal)]/[0.06]"
+                : "border-[color:var(--color-edge)]"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-display text-lg font-600">{t.title}</p>
+              {t.popular && (
+                <span className="rounded-full bg-signal px-2 py-0.5 text-[0.6rem] font-700 tracking-wide text-ink-3 uppercase">
+                  Хит
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-haze-dim">{t.period}</p>
+            <p className="mt-4 font-display text-2xl font-700">
+              {fmtRub(t.priceRub)}
+            </p>
+            <p className="mt-3 text-sm leading-snug text-haze">{t.note}</p>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -193,26 +200,13 @@ function SiteFooter() {
     <footer className="border-t border-[color:var(--color-edge)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <Wordmark tone="dark" />
-        <p className="text-sm text-haze-dim">
-          Один верифицированный гражданин — один аккаунт. Храним только хэш, не паспорт.
-        </p>
+        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-haze">
+          <Link href="/events" className="hover:text-white">События</Link>
+          <Link href="/leaderboards" className="hover:text-white">Лидерборды</Link>
+          <Link href="/pricing" className="hover:text-white">Тарифы</Link>
+          <Link href="/legal" className="hover:text-white">Правовая информация</Link>
+        </nav>
       </div>
     </footer>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
-      <path d="m5 10.5 3.2 3.2L15 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CrossIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
-      <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
   );
 }

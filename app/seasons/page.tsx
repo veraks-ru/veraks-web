@@ -30,8 +30,7 @@ export default function SeasonsPage() {
       <main className="mx-auto max-w-3xl px-5 py-8 sm:px-8">
         <h1 className="font-display text-2xl font-600 sm:text-3xl">Сезоны</h1>
         <p className="mt-1.5 text-sm text-slate">
-          Ограниченные по времени лиги с призовым фондом от спонсоров. Зачёт — по пулу
-          событий сезона.
+          Ограниченные по времени лиги с призовым фондом. Зачёт — по пулу событий сезона.
         </p>
 
         <div className="mt-6">
