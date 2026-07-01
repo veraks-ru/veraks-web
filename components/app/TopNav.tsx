@@ -51,9 +51,9 @@ export function TopNav({ active }: { active?: string }) {
               </Link>
             )}
             <Link
-              href={`/u/${me.username}`}
+              href="/account"
               className="flex items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper"
-              aria-label="Мой профиль"
+              aria-label="Мой кабинет"
             >
             <span className="flex size-8 items-center justify-center rounded-full bg-graphite text-sm font-700 text-white">
               {(me.display_name || me.username)[0]?.toUpperCase()}

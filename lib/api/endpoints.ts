@@ -6,10 +6,12 @@ import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
   ApiCalibration,
   ApiCategory,
+  ApiDispute,
   ApiEvent,
   ApiEventStatus,
   ApiLeaderboard,
   ApiMe,
+  ApiPayout,
   ApiPrediction,
   ApiPredictionSummary,
   ApiPublicProfile,
@@ -111,6 +113,24 @@ export const startSubscription = (plan: string) =>
     "/billing/subscriptions",
     { method: "POST", body: { plan } },
   );
+
+export const cancelSubscription = (id: string) =>
+  apiFetch<ApiSubscription>(`/billing/subscriptions/${id}/cancel`, { method: "POST" });
+
+/* ── Кабинет пользователя ── */
+
+export const getMyPayouts = () =>
+  apiFetch<ApiPayout[]>("/users/me/payouts", { allow: [401] });
+
+export const updateMe = (display_name: string) =>
+  apiFetch<ApiMe>("/users/me", { method: "PATCH", body: { display_name } });
+
+/* ── Оспаривание исхода (участник события) ── */
+
+export const raiseDispute = (
+  eventId: string,
+  body: { reason: string; evidence?: string },
+) => apiFetch<ApiDispute>(`/events/${eventId}/disputes`, { method: "POST", body });
 
 /** Активна ли подписка прямо сейчас. */
 export function isSubscriptionActive(s: ApiSubscription | null): boolean {
