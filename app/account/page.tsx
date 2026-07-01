@@ -79,6 +79,19 @@ export default function AccountPage() {
         <ProfileSection />
         <SubscriptionSection />
         <PayoutsSection />
+
+        <Link
+          href="/sponsor"
+          className="flex items-center justify-between rounded-[var(--radius-card)] border border-line bg-surface p-5 transition-colors hover:bg-paper"
+        >
+          <span>
+            <span className="block text-sm font-600">Кабинет спонсора</span>
+            <span className="block text-xs text-slate">
+              Завести призовой фонд и пополнять его
+            </span>
+          </span>
+          <span className="text-[color:var(--color-signal-deep)]">→</span>
+        </Link>
       </main>
     </div>
   );

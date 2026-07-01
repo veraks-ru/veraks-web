@@ -282,3 +282,10 @@ export interface ApiDivisionStandings {
   season_id: string;
   rows: ApiStandingRow[];
 }
+
+// ── Кабинет спонсора ──
+export interface ApiSponsorFundDetail {
+  fund: ApiPrizeFund;
+  available_kopecks: number;
+  payouts: ApiPayout[];
+}

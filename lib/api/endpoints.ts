@@ -20,10 +20,12 @@ import type {
   ApiPayout,
   ApiPrediction,
   ApiPredictionSummary,
+  ApiPrizeFund,
   ApiPublicProfile,
   ApiResolution,
   ApiSeason,
   ApiSocialStats,
+  ApiSponsorFundDetail,
   ApiSubscription,
   ApiUserRef,
 } from "./dto";
@@ -218,3 +220,24 @@ export const getDivisionStandings = (seasonId: string, level: number) =>
     `/seasons/${seasonId}/divisions/${level}/standings`,
     { allow: [404] },
   );
+
+/* ── Кабинет спонсора ── */
+
+export const announceSponsorFund = (body: {
+  sponsor_name: string;
+  committed_kopecks: number;
+  season_id?: string | null;
+  sponsor_ref?: string;
+}) => apiFetch<ApiPrizeFund>("/sponsor/funds", { method: "POST", body });
+
+export const depositSponsorFund = (id: string, amount_kopecks: number) =>
+  apiFetch<ApiPrizeFund>(`/sponsor/funds/${id}/deposit`, {
+    method: "POST",
+    body: { amount_kopecks },
+  });
+
+export const getMySponsorFunds = () =>
+  apiFetch<ApiPrizeFund[]>("/sponsor/funds", { allow: [401] });
+
+export const getSponsorFund = (id: string) =>
+  apiFetch<ApiSponsorFundDetail>(`/sponsor/funds/${id}`, { allow: [401, 404] });
