@@ -4,11 +4,13 @@ import { apiFetch } from "./client";
 import type { EventInput } from "./admin";
 import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
+  ApiApiKey,
   ApiCalibration,
   ApiCategory,
   ApiComment,
   ApiDispute,
   ApiDivisionStandings,
+  ApiIssuedKey,
   ApiEvent,
   ApiEventStatus,
   ApiFeedItem,
@@ -241,3 +243,17 @@ export const getMySponsorFunds = () =>
 
 export const getSponsorFund = (id: string) =>
   apiFetch<ApiSponsorFundDetail>(`/sponsor/funds/${id}`, { allow: [401, 404] });
+
+/* ── B2B: API-ключи ── */
+
+export const createApiKey = (name: string, daily_quota?: number) =>
+  apiFetch<ApiIssuedKey>("/b2b/keys", {
+    method: "POST",
+    body: daily_quota ? { name, daily_quota } : { name },
+  });
+
+export const getMyApiKeys = () =>
+  apiFetch<ApiApiKey[]>("/b2b/keys", { allow: [401] });
+
+export const revokeApiKey = (id: string) =>
+  apiFetch<null>(`/b2b/keys/${id}`, { method: "DELETE", allow: [401, 404] });

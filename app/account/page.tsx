@@ -92,6 +92,19 @@ export default function AccountPage() {
           </span>
           <span className="text-[color:var(--color-signal-deep)]">→</span>
         </Link>
+
+        <Link
+          href="/b2b"
+          className="flex items-center justify-between rounded-[var(--radius-card)] border border-line bg-surface p-5 transition-colors hover:bg-paper"
+        >
+          <span>
+            <span className="block text-sm font-600">Signal API</span>
+            <span className="block text-xs text-slate">
+              API-ключи для программного доступа к сигналам
+            </span>
+          </span>
+          <span className="text-[color:var(--color-signal-deep)]">→</span>
+        </Link>
       </main>
     </div>
   );

@@ -289,3 +289,20 @@ export interface ApiSponsorFundDetail {
   available_kopecks: number;
   payouts: ApiPayout[];
 }
+
+// ── B2B: API-ключи ──
+export interface ApiApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  daily_quota: number;
+  is_active: boolean;
+  created_at: string;
+  revoked_at: string | null;
+  used_today?: number | null;
+}
+
+export interface ApiIssuedKey {
+  key: ApiApiKey;
+  secret: string;
+}
