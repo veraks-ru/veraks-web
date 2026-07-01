@@ -7,9 +7,18 @@ import { useAuth } from "@/components/app/AuthProvider";
 import { Panel, Btn, Notice, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate } from "@/lib/format";
-import { getMySubscription, cancelSubscription } from "@/lib/api/endpoints";
+import { getMySubscription, cancelSubscription, getMyPayouts } from "@/lib/api/endpoints";
 import { TARIFFS } from "@/lib/pricing";
-import type { ApiSubscription } from "@/lib/api/dto";
+import type { ApiPayout, ApiSubscription } from "@/lib/api/dto";
+
+const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
+const PAYOUT_STATUS: Record<string, string> = {
+  pending: "создана",
+  approved: "подтверждена",
+  processing: "в обработке",
+  paid: "выплачена",
+  failed: "ошибка",
+};
 
 const PLAN_TITLE = new Map(TARIFFS.map((t) => [t.plan as string, t.title]));
 const SUB_STATUS: Record<string, string> = {
@@ -63,8 +72,44 @@ export default function AccountPage() {
         </div>
 
         <SubscriptionSection />
+        <PayoutsSection />
       </main>
     </div>
+  );
+}
+
+function PayoutsSection() {
+  const [payouts, setPayouts] = useState<ApiPayout[] | null>(null);
+  useEffect(() => {
+    getMyPayouts().then((p) => setPayouts(p ?? []));
+  }, []);
+
+  return (
+    <Panel title="Мои выплаты" desc="Призовые выплаты по итогам сезонов">
+      {payouts === null ? (
+        <div className="flex justify-center py-6">
+          <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
+        </div>
+      ) : payouts.length === 0 ? (
+        <p className="text-sm text-slate">Выплат пока нет.</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {payouts.map((p) => (
+            <li key={p.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <div>
+                <p className="font-600 tnum">{rub(p.amount_kopecks)}</p>
+                {p.tax_withheld_kopecks > 0 && (
+                  <p className="mt-0.5 text-xs text-slate">НДФЛ удержан: {rub(p.tax_withheld_kopecks)}</p>
+                )}
+              </div>
+              <span className="rounded-full bg-paper px-2.5 py-1 text-xs font-600 text-slate">
+                {PAYOUT_STATUS[p.status] ?? p.status}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }
 
