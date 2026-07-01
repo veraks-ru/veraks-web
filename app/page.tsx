@@ -3,6 +3,7 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { OracleArc } from "@/components/brand/OracleArc";
 import { ButtonLink } from "@/components/ui/Button";
 import { GRADES } from "@/lib/confidence";
+import { LEGAL_DOCS } from "@/lib/legal";
 
 export default function HomePage() {
   return (
@@ -148,12 +149,23 @@ function Loop() {
 function SiteFooter() {
   return (
     <footer className="border-t border-[color:var(--color-edge)]">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 py-10 sm:grid-cols-[1.5fr_1fr_1fr] sm:px-8">
         <Wordmark tone="dark" />
-        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-haze">
+        <nav className="flex flex-col gap-2 text-sm text-haze">
+          <p className="mb-1 text-xs font-600 tracking-wide text-haze-dim uppercase">Платформа</p>
           <Link href="/events" className="hover:text-white">События</Link>
           <Link href="/leaderboards" className="hover:text-white">Лидерборды</Link>
           <Link href="/pricing" className="hover:text-white">Тарифы</Link>
+        </nav>
+        <nav className="flex flex-col gap-2 text-sm text-haze">
+          <p className="mb-1 text-xs font-600 tracking-wide text-haze-dim uppercase">
+            Документы
+          </p>
+          {LEGAL_DOCS.map((d) => (
+            <Link key={d.slug} href={`/legal/${d.slug}`} className="hover:text-white">
+              {d.short}
+            </Link>
+          ))}
           <Link href="/legal" className="hover:text-white">Правовая информация</Link>
         </nav>
       </div>

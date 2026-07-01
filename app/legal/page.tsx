@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/Wordmark";
+import { LEGAL_DOCS } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Правовая информация — Веракс",
@@ -25,6 +26,21 @@ export default function LegalPage() {
           Проектная юридическая конструкция продукта. Не является юридическим заключением;
           итоговые тексты оферты и правил подтверждаются профильным юристом до запуска.
         </p>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {LEGAL_DOCS.map((d) => (
+            <Link
+              key={d.slug}
+              href={`/legal/${d.slug}`}
+              className="rounded-[var(--radius-card)] border border-line bg-surface p-4 transition-colors hover:border-graphite"
+            >
+              <p className="font-display text-sm font-600">{d.title}</p>
+              <p className="mt-2 text-xs font-600 text-[color:var(--color-signal-deep)]">
+                Читать →
+              </p>
+            </Link>
+          ))}
+        </div>
 
         <div className="mt-10 space-y-10">
           <Section title="Это соревнование в точности, а не азартная игра">
