@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { useAuth } from "@/components/app/AuthProvider";
-import { Panel, Btn, Notice, useAction } from "@/components/admin/ui";
+import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate } from "@/lib/format";
-import { getMySubscription, cancelSubscription, getMyPayouts } from "@/lib/api/endpoints";
+import {
+  getMySubscription,
+  cancelSubscription,
+  getMyPayouts,
+  updateMe,
+} from "@/lib/api/endpoints";
 import { TARIFFS } from "@/lib/pricing";
 import type { ApiPayout, ApiSubscription } from "@/lib/api/dto";
 
@@ -71,10 +76,43 @@ export default function AccountPage() {
           </Link>
         </div>
 
+        <ProfileSection />
         <SubscriptionSection />
         <PayoutsSection />
       </main>
     </div>
+  );
+}
+
+function ProfileSection() {
+  const { me, refresh } = useAuth();
+  const [name, setName] = useState(me?.display_name ?? "");
+  const act = useAction();
+
+  async function save() {
+    if (!name.trim()) {
+      act.setError("Отображаемое имя не может быть пустым");
+      return;
+    }
+    const r = await act.run(() => updateMe(name.trim()), "Сохранено");
+    if (r) await refresh();
+  }
+
+  return (
+    <Panel title="Профиль" desc="Публично виден только псевдоним и статистика прогнозов">
+      <div className="grid gap-4 sm:max-w-md">
+        <Field label="Псевдоним">
+          <input className={`${inputCls} bg-paper`} value={`@${me?.username ?? ""}`} disabled />
+        </Field>
+        <Field label="Отображаемое имя">
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+        </Field>
+        <div>
+          <Btn tone="primary" loading={act.loading} onClick={save}>Сохранить</Btn>
+          <Notice error={act.error} ok={act.okMsg} />
+        </div>
+      </div>
+    </Panel>
   );
 }
 
