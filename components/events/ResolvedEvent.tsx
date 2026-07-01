@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
+import { Disputes } from "@/components/events/Disputes";
 import { CategoryChip } from "@/components/ui/Badge";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
@@ -99,6 +100,8 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
           )}
           <p className="mt-3 leading-snug text-slate">{event.resolutionCriteria}</p>
         </section>
+
+        <Disputes event={event} />
       </main>
     </div>
   );

@@ -57,6 +57,7 @@ export function toPredictionEvent(
     myGrade: extra.myGrade ?? null,
     outcome: ev.outcome ?? undefined,
     resolvedAt: ev.resolved_at ?? undefined,
+    disputeWindowEndsAt: ev.dispute_window_ends_at ?? undefined,
   };
 }
 

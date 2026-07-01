@@ -42,6 +42,8 @@ export interface PredictionEvent {
   outcome?: boolean;
   resolvedAt?: string;
   sourceReference?: string;
+  /** Конец окна оспаривания (ISO); пока не прошло — исход можно оспорить. */
+  disputeWindowEndsAt?: string;
 }
 
 /* ───────────────────── Профиль и рейтинги ───────────────────── */
