@@ -249,3 +249,36 @@ export interface ApiFeedItem {
   brier?: number | null;
   outcome?: boolean | null;
 }
+
+// ── Лиги и дивизионы ──
+export interface ApiLeague {
+  id: string;
+  name: string;
+  owner_id: string;
+  invite_code: string;
+  created_at: string;
+  members?: number | null;
+}
+
+export interface ApiStandingRow {
+  rank: number;
+  user_id: string;
+  username: string;
+  display_name: string;
+  skill_score: string | null;
+  mean_brier: string | null;
+  n_resolved: number;
+}
+
+export interface ApiLeagueStandings {
+  league: ApiLeague;
+  is_member: boolean;
+  rows: ApiStandingRow[];
+}
+
+export interface ApiDivisionStandings {
+  level: number;
+  title: string;
+  season_id: string;
+  rows: ApiStandingRow[];
+}

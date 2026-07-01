@@ -8,10 +8,13 @@ import type {
   ApiCategory,
   ApiComment,
   ApiDispute,
+  ApiDivisionStandings,
   ApiEvent,
   ApiEventStatus,
   ApiFeedItem,
   ApiLeaderboard,
+  ApiLeague,
+  ApiLeagueStandings,
   ApiMe,
   ApiNotification,
   ApiPayout,
@@ -188,3 +191,30 @@ export const getMyFollowing = () =>
   apiFetch<ApiUserRef[]>("/users/me/following", { allow: [401] });
 
 export const getFeed = () => apiFetch<ApiFeedItem[]>("/feed", { allow: [401] });
+
+/* ── Лиги и дивизионы ── */
+
+export const createLeague = (name: string) =>
+  apiFetch<ApiLeague>("/leagues", { method: "POST", body: { name } });
+
+export const joinLeague = (invite_code: string) =>
+  apiFetch<ApiLeague>("/leagues/join", {
+    method: "POST",
+    body: { invite_code },
+    allow: [404],
+  });
+
+export const getMyLeagues = () =>
+  apiFetch<ApiLeague[]>("/leagues/mine", { allow: [401] });
+
+export const leaveLeague = (id: string) =>
+  apiFetch<null>(`/leagues/${id}/leave`, { method: "DELETE", allow: [401] });
+
+export const getLeagueStandings = (id: string) =>
+  apiFetch<ApiLeagueStandings>(`/leagues/${id}/standings`, { allow: [401, 404] });
+
+export const getDivisionStandings = (seasonId: string, level: number) =>
+  apiFetch<ApiDivisionStandings>(
+    `/seasons/${seasonId}/divisions/${level}/standings`,
+    { allow: [404] },
+  );

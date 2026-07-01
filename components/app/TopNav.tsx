@@ -8,13 +8,16 @@ import { NotificationBell } from "@/components/app/NotificationBell";
 const LINKS = [
   { href: "/events", label: "События" },
   { href: "/leaderboards", label: "Лидерборды" },
+  { href: "/divisions", label: "Дивизионы" },
   { href: "/seasons", label: "Сезон" },
 ];
 
 /** Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел. */
 export function TopNav({ active }: { active?: string }) {
   const { me, loading } = useAuth();
-  const links = me ? [...LINKS, { href: "/feed", label: "Лента" }] : LINKS;
+  const links = me
+    ? [...LINKS, { href: "/leagues", label: "Лиги" }, { href: "/feed", label: "Лента" }]
+    : LINKS;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
