@@ -20,10 +20,12 @@ import type {
   ApiMe,
   ApiNotification,
   ApiPayout,
+  ApiPlan,
   ApiPrediction,
   ApiPredictionSummary,
   ApiPrizeFund,
   ApiPublicProfile,
+  ApiQualification,
   ApiResolution,
   ApiSeason,
   ApiSocialStats,
@@ -257,3 +259,26 @@ export const getMyApiKeys = () =>
 
 export const revokeApiKey = (id: string) =>
   apiFetch<null>(`/b2b/keys/${id}`, { method: "DELETE", allow: [401, 404] });
+
+export const getApiKeyUsage = (id: string) =>
+  apiFetch<ApiApiKey>(`/b2b/keys/${id}/usage`, { allow: [401, 404] });
+
+/* ── Прочие чтения (сезон, фонд, тарифы, квалификация, читатели) ── */
+
+export const getSeason = (slug: string) =>
+  apiFetch<ApiSeason>(`/seasons/${slug}`, { allow: [404] });
+
+export const getPrizeFund = (fundId: string) =>
+  apiFetch<ApiPrizeFund>(`/prize-funds/${fundId}`, { allow: [404] });
+
+export const getPlans = () =>
+  apiFetch<{ plans: ApiPlan[] }>("/billing/plans", { allow: [404] });
+
+export const getSeasonQualification = (userId: string, slug: string) =>
+  apiFetch<ApiQualification>(
+    `/users/${userId}/seasons/${slug}/qualification`,
+    { allow: [404] },
+  );
+
+export const getMyFollowers = () =>
+  apiFetch<ApiUserRef[]>("/users/me/followers", { allow: [401] });

@@ -306,3 +306,22 @@ export interface ApiIssuedKey {
   key: ApiApiKey;
   secret: string;
 }
+
+// ── Прочие read-модели (квалификация, тарифы) ──
+export interface ApiQualification {
+  qualified: boolean;
+  volume_ok: boolean;
+  diversity_ok: boolean;
+  coverage_ok: boolean;
+  n_resolved: number;
+  category_count: number;
+  total_weight: number;
+  n_min: number;
+  c_min: number;
+  w_min: number;
+}
+
+export interface ApiPlan {
+  plan: string;
+  price_kopecks: number;
+}

@@ -7,6 +7,7 @@ import { TopNav } from "@/components/app/TopNav";
 import { CalibrationChart } from "@/components/profile/CalibrationChart";
 import { CalibrationRows } from "@/components/profile/CalibrationRows";
 import { FollowBar } from "@/components/profile/FollowBar";
+import { QualificationPanel } from "@/components/profile/QualificationPanel";
 import { OutcomeBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, gradeIndexForProbability, indexOfGrade } from "@/lib/confidence";
@@ -25,6 +26,7 @@ import {
 
 interface ProfileVM {
   username: string;
+  userId: string | null;
   displayName: string;
   joinedAt: string;
   meanBrier: number | null;
@@ -121,6 +123,7 @@ export default function ProfilePage() {
         if (alive) {
           setVm({
             username: profile.username,
+            userId: calib?.user_id ?? myRow?.user_id ?? null,
             displayName: profile.display_name,
             joinedAt: profile.member_since,
             meanBrier,
@@ -270,6 +273,8 @@ export default function ProfilePage() {
             </Card>
           </section>
         )}
+
+        {vm.userId && <QualificationPanel userId={vm.userId} />}
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <Card title="По категориям" subtitle="Где точнее">

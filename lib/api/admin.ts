@@ -142,3 +142,30 @@ export const approvePayout = (id: string) =>
 
 export const dispatchPayout = (id: string) =>
   apiFetch<ApiPayout>(`/admin/payouts/${id}/dispatch`, { method: "POST" });
+
+/* ── Дивизионы, редактирование сезона, рекалибровка (admin) ── */
+
+export const applyPromotion = (body: {
+  finished_season_id: string;
+  next_season_id: string;
+  promote?: number;
+  relegate?: number;
+}) => apiFetch<{ placed: number }>("/admin/divisions/apply", { method: "POST", body });
+
+export const updateSeason = (
+  id: string,
+  body: { title?: string; starts_at?: string; ends_at?: string },
+) => apiFetch<ApiSeason>(`/admin/seasons/${id}`, { method: "PATCH", body });
+
+export interface ApiRecalibrationRow {
+  nominal: number;
+  observed_freq: number;
+  n: number;
+  fitted: number;
+}
+
+export const getSeasonRecalibration = (seasonId: string) =>
+  apiFetch<ApiRecalibrationRow[]>(
+    `/admin/seasons/${seasonId}/recalibration`,
+    { allow: [404, 400] },
+  );

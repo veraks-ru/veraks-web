@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { Spinner } from "@/components/ui/Spinner";
 import { getSeasonPrizeFund } from "@/lib/api/admin";
-import { lookupUser } from "@/lib/api/endpoints";
+import { lookupUser, getSeason, getPrizeFund } from "@/lib/api/endpoints";
 import type { ApiSeasonPrizeFund } from "@/lib/api/dto";
 
 const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
@@ -28,10 +28,18 @@ export default function SeasonFundPage() {
   const { slug } = useParams<{ slug: string }>();
   const [data, setData] = useState<ApiSeasonPrizeFund | null | undefined>(undefined);
   const [names, setNames] = useState<Map<string, string>>(new Map());
+  const [seasonTitle, setSeasonTitle] = useState<string>("");
+  const [balances, setBalances] = useState<Map<string, number>>(new Map());
+
+  async function refreshFund(fundId: string) {
+    const f = await getPrizeFund(fundId);
+    if (f) setBalances((m) => new Map(m).set(fundId, f.balance_kopecks));
+  }
 
   useEffect(() => {
     let alive = true;
     (async () => {
+      getSeason(slug).then((s) => { if (alive && s) setSeasonTitle(s.title); });
       const pf = await getSeasonPrizeFund(slug);
       if (!alive) return;
       setData(pf ?? null);
@@ -56,7 +64,9 @@ export default function SeasonFundPage() {
         <Link href="/seasons" className="text-sm font-600 text-slate hover:text-graphite">
           ← Сезоны
         </Link>
-        <h1 className="mt-4 font-display text-2xl font-600 sm:text-3xl">Призовой фонд сезона</h1>
+        <h1 className="mt-4 font-display text-2xl font-600 sm:text-3xl">
+          Призовой фонд{seasonTitle ? ` · ${seasonTitle}` : " сезона"}
+        </h1>
         <p className="mt-1.5 text-sm text-slate">
           Фонд формируется из спонсорских средств. Движение фонда открыто для проверки.
         </p>
@@ -89,7 +99,13 @@ export default function SeasonFundPage() {
                     </div>
                     <p className="mt-1 text-sm text-slate">
                       Заявлено {rub(f.committed_kopecks)} · внесено {rub(f.deposited_kopecks)} ·
-                      баланс {rub(f.balance_kopecks)}
+                      баланс {rub(balances.get(f.id) ?? f.balance_kopecks)}
+                      <button
+                        onClick={() => refreshFund(f.id)}
+                        className="ml-2 text-xs text-[color:var(--color-signal-deep)] hover:underline"
+                      >
+                        обновить
+                      </button>
                     </p>
                   </li>
                 ))}

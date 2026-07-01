@@ -6,7 +6,7 @@ import { TopNav } from "@/components/app/TopNav";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
-import { createApiKey, getMyApiKeys, revokeApiKey } from "@/lib/api/endpoints";
+import { createApiKey, getMyApiKeys, revokeApiKey, getApiKeyUsage } from "@/lib/api/endpoints";
 import type { ApiApiKey } from "@/lib/api/dto";
 import { fmtDate } from "@/lib/format";
 
@@ -135,6 +135,7 @@ function SecretReveal({ secret, onClose }: { secret: string; onClose: () => void
 
 function KeyRow({ apiKey, onChanged }: { apiKey: ApiApiKey; onChanged: () => void }) {
   const act = useAction();
+  const [used, setUsed] = useState<number | null>(null);
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4">
       <div>
@@ -142,9 +143,23 @@ function KeyRow({ apiKey, onChanged }: { apiKey: ApiApiKey; onChanged: () => voi
         <p className="text-xs text-slate">
           <span className="font-mono">{apiKey.key_prefix}…</span> · квота{" "}
           {apiKey.daily_quota}/сут · создан {fmtDate(apiKey.created_at)}
+          {used !== null && (
+            <> · <span className="font-600 text-graphite">израсходовано {used}/{apiKey.daily_quota} сегодня</span></>
+          )}
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {apiKey.is_active && (
+          <Btn
+            tone="ghost"
+            onClick={async () => {
+              const r = await getApiKeyUsage(apiKey.id);
+              if (r) setUsed(r.used_today ?? 0);
+            }}
+          >
+            Расход
+          </Btn>
+        )}
         {apiKey.is_active ? (
           <Btn
             tone="danger"

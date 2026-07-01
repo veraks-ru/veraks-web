@@ -23,10 +23,28 @@ interface Options {
   signal?: AbortSignal;
 }
 
-export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T | null> {
-  let resp: Response;
+// Ротация access-токена: при 401 один раз пробуем POST /auth/refresh и
+// повторяем запрос. Дедуп параллельных обновлений — общий promise.
+let refreshing: Promise<boolean> | null = null;
+function tryRefresh(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then((r) => r.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshing = null;
+      });
+  }
+  return refreshing;
+}
+
+async function rawFetch(path: string, opts: Options): Promise<Response> {
   try {
-    resp = await fetch(`${API_BASE}${path}`, {
+    return await fetch(`${API_BASE}${path}`, {
       method: opts.method ?? "GET",
       credentials: "include",
       cache: "no-store",
@@ -34,8 +52,24 @@ export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T |
       body: opts.body ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal,
     });
-  } catch (e) {
+  } catch {
     throw new ApiError(0, "Сеть недоступна", "network");
+  }
+}
+
+export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T | null> {
+  let resp = await rawFetch(path, opts);
+
+  // Молча освежаем сессию на 401 (кроме самого refresh и явно разрешённых 401).
+  if (
+    resp.status === 401 &&
+    !opts.allow?.includes(401) &&
+    path !== "/auth/refresh" &&
+    path !== "/auth/me"
+  ) {
+    if (await tryRefresh()) {
+      resp = await rawFetch(path, opts);
+    }
   }
 
   if (opts.allow?.includes(resp.status)) return null;

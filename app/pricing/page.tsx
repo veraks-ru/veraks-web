@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/components/app/AuthProvider";
-import { startSubscription } from "@/lib/api/endpoints";
+import { startSubscription, getPlans } from "@/lib/api/endpoints";
 import { TARIFFS, fmtRub, type PlanId } from "@/lib/pricing";
 
 export default function PricingPage() {
@@ -14,6 +14,17 @@ export default function PricingPage() {
   const router = useRouter();
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Актуальные цены — с сервера (фолбэк на статические, если API недоступен).
+  const [prices, setPrices] = useState<Partial<Record<PlanId, number>>>({});
+
+  useEffect(() => {
+    getPlans().then((r) => {
+      if (!r) return;
+      const map: Partial<Record<PlanId, number>> = {};
+      for (const p of r.plans) map[p.plan as PlanId] = p.price_kopecks / 100;
+      setPrices(map);
+    });
+  }, []);
 
   async function subscribe(plan: PlanId) {
     if (!me) {
@@ -73,7 +84,7 @@ export default function PricingPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-slate">{t.period}</p>
-              <p className="mt-4 font-display text-3xl font-700 tnum">{fmtRub(t.priceRub)}</p>
+              <p className="mt-4 font-display text-3xl font-700 tnum">{fmtRub(prices[t.plan] ?? t.priceRub)}</p>
               <p className="mt-3 flex-1 text-sm leading-snug text-slate">{t.note}</p>
 
               <button
