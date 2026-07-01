@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ConfidenceDial } from "./ConfidenceDial";
+import { EventComments } from "@/components/events/EventComments";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
@@ -161,6 +162,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
             </p>
           )}
         </div>
+        <EventComments eventId={event.id} />
       </div>
     </main>
   );

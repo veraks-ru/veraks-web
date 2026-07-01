@@ -214,3 +214,38 @@ export interface LeagueConfigInput {
   k_shrink: number;
   min_predictors: number;
 }
+
+// ── Соцфичи: комментарии, подписки, лента ──
+export interface ApiCommentAuthor {
+  user_id: string;
+  username: string;
+  display_name: string;
+}
+
+export interface ApiComment {
+  id: string;
+  event_id: string;
+  body: string;
+  created_at: string;
+  author: ApiCommentAuthor | null;
+}
+
+export interface ApiSocialStats {
+  user_id: string;
+  followers: number;
+  following: number;
+  is_following: boolean;
+}
+
+export interface ApiFeedItem {
+  kind: "comment" | "score";
+  actor_id: string;
+  actor_username: string;
+  actor_display_name: string;
+  event_id: string;
+  event_title: string;
+  occurred_at: string;
+  body?: string | null;
+  brier?: number | null;
+  outcome?: boolean | null;
+}

@@ -6,9 +6,11 @@ import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
   ApiCalibration,
   ApiCategory,
+  ApiComment,
   ApiDispute,
   ApiEvent,
   ApiEventStatus,
+  ApiFeedItem,
   ApiLeaderboard,
   ApiMe,
   ApiNotification,
@@ -18,6 +20,7 @@ import type {
   ApiPublicProfile,
   ApiResolution,
   ApiSeason,
+  ApiSocialStats,
   ApiSubscription,
   ApiUserRef,
 } from "./dto";
@@ -157,3 +160,31 @@ export function isSubscriptionActive(s: ApiSubscription | null): boolean {
 
 export const proposeEvent = (body: EventInput) =>
   apiFetch<ApiEvent>("/events/propose", { method: "POST", body });
+
+/* ── Соцфичи: комментарии, подписки, лента ── */
+
+export const listComments = (eventId: string) =>
+  apiFetch<ApiComment[]>(`/events/${eventId}/comments`);
+
+export const postComment = (eventId: string, body: string) =>
+  apiFetch<ApiComment>(`/events/${eventId}/comments`, {
+    method: "POST",
+    body: { body },
+  });
+
+export const deleteComment = (id: string) =>
+  apiFetch<null>(`/comments/${id}`, { method: "DELETE", allow: [401, 403, 404] });
+
+export const followUser = (username: string) =>
+  apiFetch<null>(`/users/${username}/follow`, { method: "POST", allow: [401] });
+
+export const unfollowUser = (username: string) =>
+  apiFetch<null>(`/users/${username}/follow`, { method: "DELETE", allow: [401] });
+
+export const getSocialStats = (username: string) =>
+  apiFetch<ApiSocialStats>(`/users/${username}/social`, { allow: [404] });
+
+export const getMyFollowing = () =>
+  apiFetch<ApiUserRef[]>("/users/me/following", { allow: [401] });
+
+export const getFeed = () => apiFetch<ApiFeedItem[]>("/feed", { allow: [401] });

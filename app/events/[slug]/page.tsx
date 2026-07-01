@@ -7,6 +7,7 @@ import { TopNav } from "@/components/app/TopNav";
 import { PredictExperience } from "@/components/predict/PredictExperience";
 import { ResolvedEvent } from "@/components/events/ResolvedEvent";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
+import { EventComments } from "@/components/events/EventComments";
 import { CategoryChip, StatusBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { categoryTitle } from "@/lib/mock";
@@ -108,6 +109,7 @@ function PendingEvent({ event }: { event: PredictionEvent }) {
           <p className="mt-1 leading-snug">{event.resolutionSource}</p>
           <p className="mt-3 leading-snug text-slate">{event.resolutionCriteria}</p>
         </section>
+        <EventComments eventId={event.id} />
       </main>
     </div>
   );

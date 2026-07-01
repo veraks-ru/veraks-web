@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { Disputes } from "@/components/events/Disputes";
+import { EventComments } from "@/components/events/EventComments";
 import { CategoryChip } from "@/components/ui/Badge";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
@@ -102,6 +103,7 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
         </section>
 
         <Disputes event={event} />
+        <EventComments eventId={event.id} />
       </main>
     </div>
   );
