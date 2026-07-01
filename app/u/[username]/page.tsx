@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { CalibrationChart } from "@/components/profile/CalibrationChart";
 import { CalibrationRows } from "@/components/profile/CalibrationRows";
+import { FollowBar } from "@/components/profile/FollowBar";
 import { OutcomeBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, gradeIndexForProbability, indexOfGrade } from "@/lib/confidence";
@@ -205,6 +206,7 @@ export default function ProfilePage() {
             <p className="text-sm text-slate">
               {vm.displayName} · на платформе с {fmtDate(vm.joinedAt)}
             </p>
+            <FollowBar username={vm.username} />
           </div>
           <div className="rounded-2xl border border-line bg-surface px-5 py-3 text-center">
             <p className="text-xs text-slate">Место в общем зачёте</p>

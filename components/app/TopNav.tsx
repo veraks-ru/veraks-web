@@ -14,6 +14,7 @@ const LINKS = [
 /** Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел. */
 export function TopNav({ active }: { active?: string }) {
   const { me, loading } = useAuth();
+  const links = me ? [...LINKS, { href: "/feed", label: "Лента" }] : LINKS;
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
@@ -21,7 +22,7 @@ export function TopNav({ active }: { active?: string }) {
         <div className="flex items-center gap-8">
           <Wordmark tone="light" />
           <nav className="hidden items-center gap-1 md:flex">
-            {LINKS.map((l) => {
+            {links.map((l) => {
               const on = active === l.href;
               return (
                 <Link
