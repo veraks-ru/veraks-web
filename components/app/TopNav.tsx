@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAuth } from "@/components/app/AuthProvider";
+import { NotificationBell } from "@/components/app/NotificationBell";
 
 const LINKS = [
   { href: "/events", label: "События" },
@@ -42,6 +43,7 @@ export function TopNav({ active }: { active?: string }) {
           <span className="size-8 animate-pulse rounded-full bg-line" aria-hidden />
         ) : me ? (
           <div className="flex items-center gap-2">
+            <NotificationBell />
             {["editor", "arbiter", "admin"].includes(me.role) && (
               <Link
                 href="/admin"

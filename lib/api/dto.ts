@@ -193,6 +193,17 @@ export interface ApiSubscription {
   current_period_end: string | null;
 }
 
+export interface ApiNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface LeagueConfigInput {
   gradation_map: number[];
   n_min: number;

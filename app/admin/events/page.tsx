@@ -149,6 +149,7 @@ function ModRow({
   catTitle: Map<string, string>;
   onDone: () => void;
 }) {
+  const [reason, setReason] = useState("");
   const act = useAction();
   return (
     <li className="rounded-xl border border-line p-3.5">
@@ -156,7 +157,7 @@ function ModRow({
       <p className="mt-0.5 text-xs text-slate">
         {catTitle.get(ev.category_id) ?? "—"} · предложено участником
       </p>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <Btn
           tone="primary"
           loading={act.loading}
@@ -167,11 +168,21 @@ function ModRow({
         >
           Одобрить
         </Btn>
+        <input
+          className={`${inputCls} h-9 max-w-xs flex-1`}
+          placeholder="Причина отклонения (уйдёт автору)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
         <Btn
           tone="danger"
           loading={act.loading}
           onClick={async () => {
-            const r = await act.run(() => rejectEvent(ev.id, "не подходит"), "Отклонено");
+            if (!reason.trim()) {
+              act.setError("Укажите причину отклонения");
+              return;
+            }
+            const r = await act.run(() => rejectEvent(ev.id, reason.trim()), "Отклонено");
             if (r) onDone();
           }}
         >

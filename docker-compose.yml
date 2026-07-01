@@ -119,6 +119,7 @@ services:
       context: .
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8000
+        NEXT_PUBLIC_GOCTOPUS_URL: ws://localhost:7890/ws
     ports:
       - "3000:3000"
     depends_on:

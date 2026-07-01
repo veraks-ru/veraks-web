@@ -8,9 +8,11 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Базовый URL API вшивается в клиентский бандл на этапе сборки.
+# Публичные URL вшиваются в клиентский бандл на этапе сборки.
 ARG NEXT_PUBLIC_API_BASE=http://localhost:8000
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ARG NEXT_PUBLIC_GOCTOPUS_URL=ws://localhost:7890/ws
+ENV NEXT_PUBLIC_GOCTOPUS_URL=$NEXT_PUBLIC_GOCTOPUS_URL
 RUN npm run build
 
 FROM node:20-alpine AS run

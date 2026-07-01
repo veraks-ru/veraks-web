@@ -11,6 +11,7 @@ import type {
   ApiEventStatus,
   ApiLeaderboard,
   ApiMe,
+  ApiNotification,
   ApiPayout,
   ApiPrediction,
   ApiPredictionSummary,
@@ -131,6 +132,20 @@ export const raiseDispute = (
   eventId: string,
   body: { reason: string; evidence?: string },
 ) => apiFetch<ApiDispute>(`/events/${eventId}/disputes`, { method: "POST", body });
+
+/* ── Уведомления ── */
+
+export const getNotifications = () =>
+  apiFetch<ApiNotification[]>("/users/me/notifications", { allow: [401] });
+
+export const getUnreadCount = () =>
+  apiFetch<{ unread: number }>("/users/me/notifications/unread-count", { allow: [401] });
+
+export const markAllNotificationsRead = () =>
+  apiFetch<null>("/users/me/notifications/read", { method: "POST", allow: [401] });
+
+export const markNotificationRead = (id: string) =>
+  apiFetch<null>(`/users/me/notifications/${id}/read`, { method: "POST", allow: [401] });
 
 /** Активна ли подписка прямо сейчас. */
 export function isSubscriptionActive(s: ApiSubscription | null): boolean {
