@@ -30,6 +30,10 @@ x-backend-env: &backend-env
   # Локально окно оспаривания = 0ч: «Разрешить → Посчитать» в админке срабатывает
   # сразу (в проде окно реальное, по умолчанию 72ч).
   RESOLUTIONS_DISPUTE_WINDOW_HOURS: "0"
+  # Реал-тайм уведомления через goctopus (WS-релей).
+  GOCTOPUS_URL: http://goctopus:7890
+  GOCTOPUS_USER: orakul
+  GOCTOPUS_PASSWORD: goctopus-dev-secret
 
 services:
   postgres:
@@ -79,6 +83,24 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  goctopus:
+    profiles: ["full"]
+    image: avvolob/goctopus:latest
+    environment:
+      WS_HOST: 0.0.0.0
+      WS_PORT: "7890"
+      WS_LOGIN: orakul
+      WS_PASSWORD: goctopus-dev-secret
+      WS_AUTH_URL: http://backend:8000/realtime/ws-auth
+      WS_STORAGE: memory
+      WS_ALLOWED_ORIGINS: http://localhost:3000
+      WS_VERBOSE: "1"
+    ports:
+      - "7890:7890"
+    depends_on:
+      backend:
+        condition: service_started
 
   worker:
     profiles: ["full"]
