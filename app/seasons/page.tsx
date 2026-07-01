@@ -62,6 +62,12 @@ export default function SeasonsPage() {
                         {STATUS_LABEL[s.status]}
                       </span>
                       <Link
+                        href={`/seasons/${s.slug}/fund`}
+                        className="text-sm font-600 text-slate hover:text-graphite"
+                      >
+                        Фонд →
+                      </Link>
+                      <Link
                         href="/leaderboards"
                         className="text-sm font-700 text-graphite hover:underline"
                       >
