@@ -32,6 +32,12 @@ interface ProfileVM {
   totalRanked: number;
   eceValue: number;
   calibration: CalibrationBucket[];
+  decomposition: {
+    reliability: number;
+    resolution: number;
+    uncertainty: number;
+    brierCheck: number;
+  } | null;
   categories: CategoryStat[];
   history: HistoryItem[];
 }
@@ -122,6 +128,15 @@ export default function ProfilePage() {
             totalRanked: global?.entries.length ?? 0,
             eceValue: calib?.ece ?? eceOf(buckets),
             calibration: buckets,
+            decomposition:
+              calib && calib.n_total > 0
+                ? {
+                    reliability: calib.reliability,
+                    resolution: calib.resolution,
+                    uncertainty: calib.uncertainty,
+                    brierCheck: calib.brier_check,
+                  }
+                : null,
             categories,
             history,
           });
@@ -224,6 +239,36 @@ export default function ProfilePage() {
           </Card>
         </section>
 
+        {vm.decomposition && (
+          <section className="mt-6">
+            <Card
+              title="Разложение Brier по Мёрфи"
+              subtitle="Brier = надёжность − разрешающая способность + база"
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <DecompStat
+                  label="Надёжность"
+                  value={vm.decomposition.reliability}
+                  hint="насколько уверенность совпадает с частотой (меньше — лучше)"
+                />
+                <DecompStat
+                  label="Разрешающая способность"
+                  value={vm.decomposition.resolution}
+                  hint="умение отличать «да» от «нет» (больше — лучше)"
+                />
+                <DecompStat
+                  label="База"
+                  value={vm.decomposition.uncertainty}
+                  hint="неустранимая неопределённость исходов"
+                />
+              </div>
+              <p className="mt-4 text-xs tnum text-slate">
+                Сходимость тождества: {fmtBrier(vm.decomposition.brierCheck)}
+              </p>
+            </Card>
+          </section>
+        )}
+
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <Card title="По категориям" subtitle="Где точнее">
             {vm.categories.length ? (
@@ -297,6 +342,18 @@ function Stat({
         {value}
       </p>
       {hint && <p className="mt-0.5 text-xs text-slate">{hint}</p>}
+    </div>
+  );
+}
+
+function DecompStat({ label, value, hint }: { label: string; value: number; hint: string }) {
+  return (
+    <div className="rounded-2xl border border-line bg-paper p-4">
+      <p className="text-xs text-slate">{label}</p>
+      <p className="mt-1 font-display text-xl font-700 tnum text-[color:var(--color-signal-deep)]">
+        {fmtBrier(value)}
+      </p>
+      <p className="mt-0.5 text-xs text-slate">{hint}</p>
     </div>
   );
 }

@@ -94,6 +94,7 @@ export interface ApiCalibration {
   reliability: number;
   resolution: number;
   uncertainty: number;
+  brier_check: number;
   bins: ApiCalibrationBin[];
 }
 
