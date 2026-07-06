@@ -5,35 +5,48 @@ import { TopNav } from "@/components/app/TopNav";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { useAuth } from "@/components/app/AuthProvider";
 import type { LeaderboardRow, LeaderboardScope } from "@/lib/types";
-import type { ApiCategory } from "@/lib/api/dto";
+import type { ApiCategory, ApiSeason } from "@/lib/api/dto";
 import {
   getCategoryLeaderboard,
   getGlobalLeaderboard,
   getSeasonLeaderboard,
   listCategories,
+  listSeasons,
   lookupUser,
 } from "@/lib/api/endpoints";
-
-const SEASON_SLUG = "2026-q2";
 
 export default function LeaderboardsPage() {
   const { me } = useAuth();
   const [scope, setScope] = useState<LeaderboardScope>("global");
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [cat, setCat] = useState<string>("");
+  // Активный сезон — из API (как в дивизионах/квалификации), не хардкод.
+  const [season, setSeason] = useState<ApiSeason | null | undefined>(undefined);
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    listCategories().then((c) => {
-      setCategories(c ?? []);
-      if (c && c.length) setCat((prev) => prev || c[0].id);
-    });
+    listCategories()
+      .then((c) => {
+        setCategories(c ?? []);
+        if (c && c.length) setCat((prev) => prev || c[0].id);
+      })
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    listSeasons()
+      .then((s) => {
+        const items = s?.items ?? [];
+        setSeason(items.find((x) => x.status === "active") ?? items[items.length - 1] ?? null);
+      })
+      .catch(() => setSeason(null));
   }, []);
 
   useEffect(() => {
     if (scope === "category" && !cat) return;
+    if (scope === "season" && season === undefined) return; // ждём сезон
     let alive = true;
     setRows(null);
     setError(false);
@@ -43,7 +56,9 @@ export default function LeaderboardsPage() {
           scope === "category"
             ? await getCategoryLeaderboard(cat)
             : scope === "season"
-              ? await getSeasonLeaderboard(SEASON_SLUG)
+              ? season
+                ? await getSeasonLeaderboard(season.slug)
+                : null
               : await getGlobalLeaderboard();
         const entries = lb?.entries ?? [];
         const refs = await Promise.all(entries.map((e) => lookupUser(e.user_id)));
@@ -63,7 +78,7 @@ export default function LeaderboardsPage() {
     return () => {
       alive = false;
     };
-  }, [scope, cat, reload, me]);
+  }, [scope, cat, reload, me, season]);
 
   const catTitle = useMemo(
     () => categories.find((c) => c.id === cat)?.title ?? "",
@@ -105,7 +120,7 @@ export default function LeaderboardsPage() {
           </div>
         )}
 
-        {scope === "season" && <SeasonBanner />}
+        {scope === "season" && <SeasonBanner season={season} />}
 
         <div className="mt-6">
           {error ? (
@@ -129,18 +144,36 @@ export default function LeaderboardsPage() {
   );
 }
 
-function SeasonBanner() {
+const SEASON_STATUS: Record<ApiSeason["status"], string> = {
+  upcoming: "скоро",
+  active: "идёт",
+  finished: "завершён",
+};
+
+function SeasonBanner({ season }: { season: ApiSeason | null | undefined }) {
+  if (season === undefined) {
+    return (
+      <div className="mt-4 h-16 animate-pulse rounded-[var(--radius-card)] border border-line bg-surface" />
+    );
+  }
+  if (!season) {
+    return (
+      <div className="mt-4 rounded-[var(--radius-card)] border border-line bg-surface p-5 text-sm text-slate">
+        Активного сезона пока нет.
+      </div>
+    );
+  }
   return (
     <div className="mt-4 rounded-[var(--radius-card)] border border-line bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-display text-lg font-600">Сезон 2026 · II квартал</p>
+          <p className="font-display text-lg font-600">{season.title}</p>
           <p className="mt-0.5 text-sm text-slate">
             Зачёт по пулу событий сезона.
           </p>
         </div>
         <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">
-          идёт
+          {SEASON_STATUS[season.status]}
         </span>
       </div>
     </div>

@@ -37,7 +37,9 @@ export default function AdminSeasonsPage() {
   const refresh = () => setReload((n) => n + 1);
 
   useEffect(() => {
-    listSeasons().then((r) => setSeasons(r?.items ?? []));
+    listSeasons()
+      .then((r) => setSeasons(r?.items ?? []))
+      .catch(() => setSeasons([]));
   }, [reload]);
 
   return (

@@ -42,9 +42,13 @@ export default function EventsPage() {
         ]);
         const catMap = new Map((cats ?? []).map((c) => [c.id, c.slug]));
         const grades = myGradeMap(mine);
-        // Консенсус виден для всех событий (в т.ч. открытых).
+        // Консенсус виден для всех событий (в т.ч. открытых). Черновики,
+        // предложения на модерации и отменённые в публичную ленту не идут.
         const list = (evs ?? []).filter(
-          (e) => e.status !== "draft" && e.status !== "cancelled",
+          (e) =>
+            e.status !== "draft" &&
+            e.status !== "proposed" &&
+            e.status !== "cancelled",
         );
         const summaries = await Promise.all(list.map((e) => getPredictionSummary(e.id)));
         const sumMap = new Map(list.map((e, i) => [e.id, summaries[i]]));
@@ -96,8 +100,8 @@ export default function EventsPage() {
           <div>
             <h1 className="font-display text-2xl font-600 sm:text-3xl">События</h1>
             <p className="mt-1.5 max-w-xl text-sm text-slate">
-              Смотрите, как голосует толпа, и делайте свой прогноз словами. Голосование — по
-              подписке; смотреть консенсус можно бесплатно.
+              Делайте свой прогноз словами и растите в рейтинге точности. Участвовать можно
+              бесплатно — подписка открывает расширенную аналитику.
             </p>
           </div>
           <Link
@@ -180,7 +184,7 @@ function Filters(props: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Статус">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр событий">
           {statuses.map((s) => (
             <Pill key={s.k} on={props.status === s.k} onClick={() => props.setStatus(s.k)}>
               {s.label}

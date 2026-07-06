@@ -77,8 +77,8 @@ export function TopNav({ active }: { active?: string }) {
         )}
       </div>
 
-      <nav className="flex items-center gap-1 border-t border-line px-3 py-2 md:hidden">
-        {LINKS.map((l) => {
+      <nav className="flex items-center gap-1 overflow-x-auto border-t border-line px-3 py-2 md:hidden">
+        {links.map((l) => {
           const on = active === l.href;
           return (
             <Link

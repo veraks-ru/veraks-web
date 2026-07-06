@@ -7,7 +7,6 @@ import { EventComments } from "@/components/events/EventComments";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
-import { crowdShares, crowdReadingLabel, crowdReadingIndex, crowdTotal } from "@/lib/crowd";
 import { putPrediction } from "@/lib/api/endpoints";
 import { categoryTitle } from "@/lib/mock";
 import { deadlineLabel, nPeople } from "@/lib/format";
@@ -17,7 +16,7 @@ import type { PredictionEvent } from "@/lib/types";
 type Phase = "edit" | "submitting" | "done";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
-  const { me, subscribed } = useAuth();
+  const { me } = useAuth();
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
   const [chosen, setChosen] = useState<number | null>(initial);
   const [phase, setPhase] = useState<Phase>(event.myGrade ? "done" : "edit");
@@ -105,24 +104,17 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           />
         </section>
 
-        {/* Текущий консенсус толпы — виден всегда. */}
-        {crowdTotal(event.crowd) > 0 && <ConsensusReveal event={event} mine={chosen} />}
+        {/* Консенсус толпы на вводе не показываем: он скрыт до закрытия приёма
+            (анти-якорение), а проценты на вводе запрещены (DESIGN.md). */}
 
-        {/* Действие — гейт по входу и подписке */}
+        {/* Действие — гейт только по входу (участие бесплатно). */}
         <div className="mt-6">
           {!me ? (
             <GatePanel
               title="Войдите, чтобы голосовать"
-              note="Смотреть консенсус можно без входа. Чтобы сделать свой прогноз — войдите."
+              note="Участвовать можно бесплатно. Войдите, чтобы сделать свой прогноз."
               cta="Войти через Госуслуги"
               href="/join"
-            />
-          ) : !subscribed ? (
-            <GatePanel
-              title="Голосование — по подписке"
-              note="Смотреть площадку бесплатно. Чтобы голосовать и расти в рейтинге, оформите подписку от 99 ₽."
-              cta="Выбрать тариф"
-              href="/pricing"
             />
           ) : phase === "done" ? (
             <div className="flex flex-col items-center gap-3">
@@ -266,71 +258,6 @@ function SourceDisclosure({ event }: { event: PredictionEvent }) {
         </div>
       )}
     </div>
-  );
-}
-
-/* ───────────────────── Раскрытие толпы ───────────────────── */
-
-function ConsensusReveal({
-  event,
-  mine,
-}: {
-  event: PredictionEvent;
-  mine: number | null;
-}) {
-  const shares = crowdShares(event.crowd);
-  const max = Math.max(...shares, 0.0001);
-  const crowdIdx = crowdReadingIndex(event.crowd);
-
-  return (
-    <section className="mt-6 rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/40 p-6">
-      <p className="text-sm font-600">Как голосует толпа</p>
-      <p className="mt-1 text-xs text-haze-dim">
-        Текущее распределение прогнозов по этому событию.
-      </p>
-
-      <div className="mt-5 flex items-end gap-2" aria-hidden="true">
-        {GRADES.map((g, i) => {
-          const h = 10 + (shares[i] / max) * 64;
-          const isMine = i === mine;
-          return (
-            <div key={g.grade} className="flex flex-1 flex-col items-center gap-2">
-              <span className="text-[0.62rem] tnum text-haze-dim">
-                {Math.round(shares[i] * 100)}%
-              </span>
-              <span
-                className="w-full rounded-t-md"
-                style={{
-                  height: `${h}px`,
-                  background: gradeColor(i),
-                  opacity: isMine ? 1 : 0.4,
-                  outline: isMine ? "2px solid var(--color-signal)" : "none",
-                  outlineOffset: "2px",
-                }}
-              />
-              <span className="text-center text-[0.6rem] leading-tight text-haze">
-                {g.short}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl bg-white/5 p-3">
-          <p className="text-xs text-haze-dim">Вы</p>
-          <p className="mt-0.5 font-700" style={{ color: mine == null ? "#fff" : gradeColor(mine) }}>
-            {mine == null ? "—" : GRADES[mine].label}
-          </p>
-        </div>
-        <div className="rounded-xl bg-white/5 p-3">
-          <p className="text-xs text-haze-dim">Толпа</p>
-          <p className="mt-0.5 font-700" style={{ color: gradeColor(crowdIdx) }}>
-            {crowdReadingLabel(event.crowd)}
-          </p>
-        </div>
-      </div>
-    </section>
   );
 }
 

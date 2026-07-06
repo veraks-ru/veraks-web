@@ -34,7 +34,12 @@ export default function PricingPage() {
     setBusy(plan);
     setError(null);
     try {
-      await startSubscription(plan);
+      const res = await startSubscription(plan);
+      // Провайдер вернул страницу оплаты — уводим пользователя туда.
+      if (res?.confirmation_url) {
+        window.location.href = res.confirmation_url;
+        return;
+      }
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось оформить подписку");
@@ -50,19 +55,19 @@ export default function PricingPage() {
         <div className="max-w-2xl">
           <h1 className="font-display text-3xl font-700 sm:text-4xl">Тарифы</h1>
           <p className="mt-3 text-[0.97rem] leading-relaxed text-slate">
-            Смотреть события, консенсус толпы и публичные трек-рекорды — бесплатно и без
-            входа. Чтобы голосовать самому и расти в рейтинге, нужна активная подписка.
+            Смотреть события и публичные трек-рекорды — бесплатно. Участвовать в прогнозах
+            тоже бесплатно; подписка открывает расширенную аналитику и предложение событий.
             Выберите срок:
           </p>
         </div>
 
         {subscribed && (
           <div className="mt-6 rounded-xl border border-[color:var(--color-signal)]/40 bg-[color:var(--color-signal)]/[0.08] px-4 py-3 text-sm font-600 text-[color:var(--color-signal-deep)]">
-            Подписка активна — можно голосовать. Продление продлевает доступ.
+            Подписка активна — расширенная аналитика открыта. Продление продлевает доступ.
           </div>
         )}
         {error && (
-          <div className="mt-6 rounded-xl bg-[#e0746a]/10 px-4 py-3 text-sm text-[#c2453a]" role="alert">
+          <div className="mt-6 rounded-xl bg-[color:var(--color-danger)]/10 px-4 py-3 text-sm text-[color:var(--color-danger)]" role="alert">
             {error}
           </div>
         )}
@@ -84,7 +89,7 @@ export default function PricingPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-slate">{t.period}</p>
-              <p className="mt-4 font-display text-3xl font-700 tnum">{fmtRub(prices[t.plan] ?? t.priceRub)}</p>
+              <p className="num mt-4 text-3xl font-700">{fmtRub(prices[t.plan] ?? t.priceRub)}</p>
               <p className="mt-3 flex-1 text-sm leading-snug text-slate">{t.note}</p>
 
               <button
@@ -111,7 +116,7 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-8 text-sm text-slate">
-          Подписка оплачивает доступ к участию и аналитике. Подробности —{" "}
+          Подписка открывает расширенную аналитику и предложение событий. Подробности —{" "}
           <Link href="/legal" className="text-[color:var(--color-signal-deep)] underline-offset-2 hover:underline">
             в правовой информации
           </Link>

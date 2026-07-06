@@ -34,7 +34,10 @@ export default function SponsorPage() {
   const { me, loading: authLoading } = useAuth();
   const [funds, setFunds] = useState<ApiPrizeFund[] | null>(null);
 
-  const load = () => getMySponsorFunds().then((f) => setFunds(f ?? []));
+  const load = () =>
+    getMySponsorFunds()
+      .then((f) => setFunds(f ?? []))
+      .catch(() => setFunds([]));
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -148,12 +151,16 @@ function AnnounceForm({ onDone }: { onDone: () => void }) {
 
 function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => void }) {
   const [amount, setAmount] = useState("");
-  const [detail, setDetail] = useState<ApiSponsorFundDetail | null>(null);
+  const [detail, setDetail] = useState<ApiSponsorFundDetail | null | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const act = useAction();
 
   useEffect(() => {
-    if (open && !detail) getSponsorFund(fund.id).then(setDetail);
+    if (open && detail === undefined) {
+      getSponsorFund(fund.id)
+        .then((d) => setDetail(d ?? null))
+        .catch(() => setDetail(null));
+    }
   }, [open, detail, fund.id]);
 
   return (
@@ -191,7 +198,7 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
             );
             if (r) {
               setAmount("");
-              setDetail(null);
+              setDetail(undefined); // перечитать выплаты при открытии
               onChanged();
             }
           }}
@@ -206,8 +213,10 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
 
       {open && (
         <div className="mt-4 border-t border-line/60 pt-3">
-          {detail === null ? (
+          {detail === undefined ? (
             <p className="text-sm text-slate">Загрузка…</p>
+          ) : detail === null ? (
+            <p className="text-sm text-slate">Не удалось загрузить выплаты.</p>
           ) : detail.payouts.length === 0 ? (
             <p className="text-sm text-slate">Выплат из фонда пока не было.</p>
           ) : (

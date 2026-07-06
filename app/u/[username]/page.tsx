@@ -33,7 +33,7 @@ interface ProfileVM {
   nResolved: number;
   globalRank: number | null;
   totalRanked: number;
-  eceValue: number;
+  eceValue: number | null;
   calibration: CalibrationBucket[];
   decomposition: {
     reliability: number;
@@ -130,7 +130,8 @@ export default function ProfilePage() {
             nResolved: myRow?.n_resolved ?? scored.length,
             globalRank: myRow?.rank ?? null,
             totalRanked: global?.entries.length ?? 0,
-            eceValue: calib?.ece ?? eceOf(buckets),
+            // Без бакетов не показываем eceOf([])=0 как «идеальную» калибровку.
+            eceValue: buckets.length ? (calib?.ece ?? eceOf(buckets)) : null,
             calibration: buckets,
             decomposition:
               calib && calib.n_total > 0
@@ -192,9 +193,14 @@ export default function ProfilePage() {
     );
   }
 
-  const verdict = calibrationVerdict(vm.eceValue);
-  const toneColor =
-    verdict.tone === "good" ? "var(--color-signal-deep)" : verdict.tone === "ok" ? "#b56b1e" : "#c2453a";
+  const verdict = vm.eceValue == null ? null : calibrationVerdict(vm.eceValue);
+  const toneColor = !verdict
+    ? "var(--color-slate)"
+    : verdict.tone === "good"
+      ? "var(--color-accurate)"
+      : verdict.tone === "ok"
+        ? "var(--color-mixed)"
+        : "var(--color-off)";
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -213,7 +219,7 @@ export default function ProfilePage() {
           </div>
           <div className="rounded-2xl border border-line bg-surface px-5 py-3 text-center">
             <p className="text-xs text-slate">Место в общем зачёте</p>
-            <p className="font-display text-2xl font-700 tnum text-[color:var(--color-signal-deep)]">
+            <p className="num text-2xl font-700 text-[color:var(--color-signal-deep)]">
               {vm.globalRank ? `#${vm.globalRank}` : "—"}
             </p>
             <p className="text-xs tnum text-slate">{vm.totalRanked ? `из ${vm.totalRanked}` : "вне зачёта"}</p>
@@ -224,7 +230,13 @@ export default function ProfilePage() {
           <Stat label="Средний Brier" value={vm.meanBrier == null ? "—" : fmtBrier(vm.meanBrier)} hint="меньше — точнее" />
           <Stat label="Разрешено" value={String(vm.nResolved)} hint="засчитанных прогнозов" />
           <Stat label="Градаций в калибровке" value={String(vm.calibration.length)} hint="использовано" />
-          <Stat label="Калибровка" value={verdict.label} valueColor={toneColor} hint={`ошибка ${fmtBrier(vm.eceValue)}`} small />
+          <Stat
+            label="Калибровка"
+            value={verdict ? verdict.label : "—"}
+            valueColor={toneColor}
+            hint={vm.eceValue == null ? "недостаточно данных" : `ошибка ${fmtBrier(vm.eceValue)}`}
+            small
+          />
         </div>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -343,7 +355,7 @@ function Stat({
     <div className="rounded-2xl border border-line bg-surface p-4">
       <p className="text-xs text-slate">{label}</p>
       <p
-        className={`mt-1 font-display font-700 ${small ? "text-base leading-tight" : "text-2xl tnum"}`}
+        className={`mt-1 font-700 ${small ? "font-display text-base leading-tight" : "num text-2xl"}`}
         style={{ color: valueColor }}
       >
         {value}
@@ -357,7 +369,7 @@ function DecompStat({ label, value, hint }: { label: string; value: number; hint
   return (
     <div className="rounded-2xl border border-line bg-paper p-4">
       <p className="text-xs text-slate">{label}</p>
-      <p className="mt-1 font-display text-xl font-700 tnum text-[color:var(--color-signal-deep)]">
+      <p className="num mt-1 text-xl font-700 text-[color:var(--color-signal-deep)]">
         {fmtBrier(value)}
       </p>
       <p className="mt-0.5 text-xs text-slate">{hint}</p>

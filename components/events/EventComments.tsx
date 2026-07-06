@@ -15,10 +15,22 @@ export function EventComments({ eventId }: { eventId: string }) {
   const act = useAction();
   const isModerator = me?.role === "admin" || me?.role === "editor" || me?.role === "arbiter";
 
-  const load = () => listComments(eventId).then((c) => setComments(c ?? []));
+  const load = () =>
+    listComments(eventId)
+      .then((c) => setComments(c ?? []))
+      .catch(() => setComments([]));
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let alive = true;
+    listComments(eventId)
+      .then((c) => {
+        if (alive) setComments(c ?? []);
+      })
+      .catch(() => {
+        if (alive) setComments([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, [eventId]);
 
   async function submit() {
@@ -93,7 +105,7 @@ export function EventComments({ eventId }: { eventId: string }) {
                   {canDelete && (
                     <button
                       onClick={() => remove(c.id)}
-                      className="text-xs text-slate hover:text-red-600"
+                      className="text-xs text-slate hover:text-[color:var(--color-danger)]"
                     >
                       удалить
                     </button>

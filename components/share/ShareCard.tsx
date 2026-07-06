@@ -17,16 +17,22 @@ export function ShareCard({
   username: string;
 }) {
   const outcome = !!event.outcome;
-  const gradeIndex = event.myGrade ? indexOfGrade(event.myGrade) : 2;
-  const brierValue = (GRADES[gradeIndex].probability - (outcome ? 1 : 0)) ** 2;
-  const verdict = resultVerdict(brierValue);
-  const good = brierValue < 0.2;
-  const verdictColor = good
-    ? "var(--color-signal)"
-    : brierValue < 0.45
-      ? "var(--color-warm)"
-      : "var(--color-cool)";
   const outcomeColor = outcome ? "var(--color-warm)" : "var(--color-cool)";
+
+  // Показания и вердикт считаем ТОЛЬКО если автор действительно голосовал.
+  // Без прогноза не выдумываем «50/50» и оценку точности.
+  const gradeIndex = event.myGrade ? indexOfGrade(event.myGrade) : null;
+  const brierValue =
+    gradeIndex == null ? null : (GRADES[gradeIndex].probability - (outcome ? 1 : 0)) ** 2;
+  const verdict = brierValue == null ? null : resultVerdict(brierValue);
+  const verdictColor =
+    brierValue == null
+      ? "var(--color-haze)"
+      : brierValue < 0.2
+        ? "var(--color-signal)"
+        : brierValue < 0.45
+          ? "var(--color-warm)"
+          : "var(--color-cool)";
 
   return (
     <div className="bg-oracle grain relative aspect-[1.91/1] w-full overflow-hidden rounded-[1.5rem] border border-[color:var(--color-edge)] text-white">
@@ -54,30 +60,48 @@ export function ShareCard({
                 {outcome ? "ДА" : "НЕТ"}
               </span>
             </p>
-            <p className="mt-1 text-sm text-haze">
-              <span className="font-600 text-white">@{username}</span> сказал{" "}
-              <span className="font-700" style={{ color: gradeColor(gradeIndex) }}>
-                «{GRADES[gradeIndex].label}»
-              </span>
-            </p>
+            {gradeIndex != null ? (
+              <p className="mt-1 text-sm text-haze">
+                <span className="font-600 text-white">@{username}</span> сказал{" "}
+                <span className="font-700" style={{ color: gradeColor(gradeIndex) }}>
+                  «{GRADES[gradeIndex].label}»
+                </span>
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-haze">
+                <span className="font-600 text-white">@{username}</span> не участвовал в этом
+                прогнозе
+              </p>
+            )}
           </div>
 
-          <div className="hidden w-40 shrink-0 sm:block">
-            <OracleArc activeIndex={gradeIndex} className="w-full" />
-          </div>
+          {gradeIndex != null && (
+            <div className="hidden w-40 shrink-0 sm:block">
+              <OracleArc activeIndex={gradeIndex} className="w-full" />
+            </div>
+          )}
         </div>
 
         {/* подвал */}
         <div className="flex items-end justify-between">
-          <div>
-            <p className="text-[0.7rem] tracking-wide text-haze-dim uppercase">точность</p>
-            <p className="font-display text-2xl font-700" style={{ color: verdictColor }}>
-              {verdict}
-              <span className="ml-2 font-mono text-base tnum text-haze">
-                Brier {fmtBrier(brierValue)}
-              </span>
-            </p>
-          </div>
+          {brierValue != null && verdict != null ? (
+            <div>
+              <p className="text-[0.7rem] tracking-wide text-haze-dim uppercase">точность</p>
+              <p className="font-display text-2xl font-700" style={{ color: verdictColor }}>
+                {verdict}
+                <span className="ml-2 font-mono text-base tnum text-haze">
+                  Brier {fmtBrier(brierValue)}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-[0.7rem] tracking-wide text-haze-dim uppercase">итог</p>
+              <p className="font-display text-2xl font-700" style={{ color: outcomeColor }}>
+                {outcome ? "ДА" : "НЕТ"}
+              </p>
+            </div>
+          )}
           <p className="text-right text-xs leading-tight text-haze-dim">
             Слова стоят дёшево.
             <br />

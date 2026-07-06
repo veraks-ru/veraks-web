@@ -19,7 +19,9 @@ export default function FeedPage() {
       setItems([]);
       return;
     }
-    getFeed().then((f) => setItems(f ?? []));
+    getFeed()
+      .then((f) => setItems(f ?? []))
+      .catch(() => setItems([]));
   }, [me, authLoading]);
 
   return (

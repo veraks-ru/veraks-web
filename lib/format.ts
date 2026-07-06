@@ -3,6 +3,18 @@
 /** Brier и калибровка показываются с тремя знаками: 0.142 */
 export const fmtBrier = (v: number): string => v.toFixed(3);
 
+/**
+ * Цвет точности прогноза по Brier — CSS-токен, НЕ красно-зелёный светофор
+ * (DESIGN.md: «это не казино»). Точнее прогноз — ярче сигнал; мимо — гаснет
+ * до приглушённого slate. Возвращает var() токена, чтобы тема оставалась
+ * единственным источником истины.
+ */
+export function accuracyColor(brier: number): string {
+  if (brier < 0.2) return "var(--color-accurate)";
+  if (brier < 0.45) return "var(--color-mixed)";
+  return "var(--color-off)";
+}
+
 export const fmtPercent = (frac: number, digits = 0): string =>
   `${(frac * 100).toFixed(digits)}%`;
 

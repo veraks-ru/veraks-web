@@ -73,7 +73,12 @@ export default function EventPage() {
 
   const { event } = state;
   if (event.status === "open") return <PredictExperience event={event} />;
-  if (event.status === "resolved" && event.outcome !== undefined) {
+  // Оспоренное событие тоже имеет зафиксированный исход — показываем его и блок
+  // Disputes (как в resolved), а не заглушку «результат появится».
+  if (
+    (event.status === "resolved" || event.status === "disputed") &&
+    event.outcome !== undefined
+  ) {
     return <ResolvedEvent event={event} />;
   }
   return <PendingEvent event={event} />;

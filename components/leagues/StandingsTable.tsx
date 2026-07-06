@@ -30,7 +30,7 @@ export function StandingsTable({
                 highlightUserId === r.user_id ? "bg-paper" : ""
               }`}
             >
-              <td className="py-2 pr-3 tnum font-700 text-[color:var(--color-signal-deep)]">
+              <td className="num py-2 pr-3 font-700 text-[color:var(--color-signal-deep)]">
                 {r.rank}
               </td>
               <td className="py-2 pr-3">
@@ -38,10 +38,10 @@ export function StandingsTable({
                   {r.display_name}
                 </Link>
               </td>
-              <td className="py-2 pr-3 text-right tnum">
+              <td className="num py-2 pr-3 text-right">
                 {r.skill_score != null ? Number(r.skill_score).toFixed(3) : "—"}
               </td>
-              <td className="py-2 text-right tnum text-slate">
+              <td className="num py-2 text-right text-slate">
                 {r.mean_brier != null ? Number(r.mean_brier).toFixed(3) : "—"}
               </td>
             </tr>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Button } from "@/components/ui/Button";
 import { API_BASE } from "@/lib/api/client";
@@ -31,6 +32,18 @@ export default function JoinPage() {
               <GosIcon className="size-5" />
               Войти через Госуслуги
             </Button>
+
+            <p className="mt-5 text-xs leading-relaxed text-haze-dim">
+              Продолжая, вы принимаете{" "}
+              <Link href="/legal/oferta" className="text-haze underline underline-offset-2 hover:text-white">
+                оферту
+              </Link>{" "}
+              и{" "}
+              <Link href="/legal/pdn" className="text-haze underline underline-offset-2 hover:text-white">
+                обработку персональных данных
+              </Link>
+              . Участие в конкурсе — бесплатное.
+            </p>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import {
   isSubscriptionActive,
   logout as apiLogout,
 } from "@/lib/api/endpoints";
+import { tryRefresh } from "@/lib/api/client";
 import type { ApiMe } from "@/lib/api/dto";
 
 interface AuthState {
@@ -32,7 +33,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const user = await getMe();
+      let user = await getMe();
+      // getMe идёт с allow:[401] → протухший access-токен не запускает
+      // авто-refresh в клиенте. Освежаем сессию один раз и повторяем (без
+      // цикла), иначе сессия «умирает» через ~15 мин, пока refresh ещё жив.
+      if (!user && (await tryRefresh())) {
+        user = await getMe();
+      }
       setMe(user);
       if (user) {
         const sub = await getMySubscription();

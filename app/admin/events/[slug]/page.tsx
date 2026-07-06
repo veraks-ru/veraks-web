@@ -83,17 +83,25 @@ export default function ManageEventPage() {
 
 function Lifecycle({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
   const act = useAction();
-  const run = (fn: () => Promise<unknown>, msg: string) => act.run(fn, msg).then((r) => { if (r !== undefined) onDone(); });
+  // Спиннер только у нажатой кнопки, а не у всех сразу.
+  const [busy, setBusy] = useState<string | null>(null);
+  const run = (key: string, fn: () => Promise<unknown>, msg: string) => {
+    setBusy(key);
+    return act
+      .run(fn, msg)
+      .then((r) => { if (r !== undefined) onDone(); })
+      .finally(() => setBusy(null));
+  };
   return (
     <Panel title="Жизненный цикл" desc="Перевод статуса события">
       <div className="flex flex-wrap gap-2">
-        <Btn tone="primary" disabled={ev.status !== "draft"} loading={act.loading} onClick={() => run(() => publishEvent(ev.id), "Опубликовано")}>
+        <Btn tone="primary" disabled={ev.status !== "draft"} loading={busy === "publish"} onClick={() => run("publish", () => publishEvent(ev.id), "Опубликовано")}>
           Опубликовать
         </Btn>
-        <Btn disabled={ev.status !== "open"} loading={act.loading} onClick={() => run(() => closeEvent(ev.id), "Приём закрыт")}>
+        <Btn disabled={ev.status !== "open"} loading={busy === "close"} onClick={() => run("close", () => closeEvent(ev.id), "Приём закрыт")}>
           Закрыть приём
         </Btn>
-        <Btn tone="danger" disabled={["resolved", "cancelled"].includes(ev.status)} loading={act.loading} onClick={() => run(() => cancelEvent(ev.id), "Событие отменено")}>
+        <Btn tone="danger" disabled={["resolved", "cancelled"].includes(ev.status)} loading={busy === "cancel"} onClick={() => run("cancel", () => cancelEvent(ev.id), "Событие отменено")}>
           Отменить
         </Btn>
       </div>

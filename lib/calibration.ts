@@ -32,10 +32,18 @@ export function calibrationVerdict(e: number): {
   return { label: "Слабая калибровка", tone: "off" };
 }
 
-/** Над/недо-уверенность в бакете: factual − claimed. */
+/**
+ * Над/недо-уверенность в бакете. Переуверенность = прогноз ЭКСТРЕМАЛЬНЕЕ
+ * реальности (дальше от 50%, чем оправдалось), а не просто «факт ниже
+ * заявленного». Иначе для «нет»-градаций знак инвертируется: сказать «Точно
+ * нет» (10%), когда сбывается 22%, — это переуверенность, а не наоборот.
+ * Сравниваем удалённость от 0.5: |actual−0.5| < |claimed−0.5| → over.
+ * Для «50 на 50» (claimed=0.5) экстремальности нет — выйдет under/spot.
+ */
 export function bucketBias(b: CalibrationBucket): "over" | "under" | "spot" {
-  const diff = bucketActual(b) - bucketClaimed(b);
-  if (Math.abs(diff) <= 0.04) return "spot";
-  // склонность к ДА завышена → переуверенность в «да»-полюсе и наоборот.
-  return diff < 0 ? "over" : "under";
+  const claimedExt = Math.abs(bucketClaimed(b) - 0.5);
+  const actualExt = Math.abs(bucketActual(b) - 0.5);
+  const gap = actualExt - claimedExt;
+  if (Math.abs(gap) <= 0.04) return "spot";
+  return gap < 0 ? "over" : "under";
 }

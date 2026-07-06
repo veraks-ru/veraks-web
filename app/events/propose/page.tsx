@@ -77,7 +77,7 @@ export default function ProposeEventPage() {
           ) : !subscribed ? (
             <Gate
               title="Нужна подписка"
-              note="Предлагать события, как и голосовать, можно по активной подписке — от 99 ₽."
+              note="Предлагать события можно по активной подписке — от 99 ₽."
               cta="Выбрать тариф"
               href="/pricing"
             />

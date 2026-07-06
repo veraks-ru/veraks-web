@@ -7,6 +7,10 @@
   --color-ink-3: #090d22;
   --color-haze: #9aa3c0;
   --color-haze-dim: #6c7392;
+  /* Грань тёмной среды — тонкая светящаяся линия на «сумеречном» фоне.
+     DESIGN.md называет этот токен, но он не был определён (границы на
+     онбординге/экране прогноза/шеринге рендерились невидимыми). */
+  --color-edge: #2b3566;
 
   /* ── Light environment (лента, лидерборды, профили) ───────────── */
   --color-paper: #f6f7fb;
@@ -20,6 +24,22 @@
   --color-signal-deep: #16b39a;
   --color-cool: #7c8cf8;
   --color-warm: #f2a65a;
+
+  /* Читаемые «чернильные» тона спектра для текста/бейджей на светлом
+     (сами cool/warm слишком светлы как текст). */
+  --color-cool-ink: #4654c4;
+  --color-warm-ink: #b56b1e;
+
+  /* Точность прогноза — это ИНТЕНСИВНОСТЬ сигнала, а не казино-светофор:
+     точно → signal-deep, средне → warm-ink, мимо → приглушённый slate
+     (спокойный, не тревожный красный). DESIGN.md: «это не казино». */
+  --color-accurate: var(--color-signal-deep);
+  --color-mixed: var(--color-warm-ink);
+  --color-off: var(--color-slate);
+
+  /* Деструктивные действия (удалить/отклонить) — единственная роль красного,
+     семантически отличная от исхода прогноза. */
+  --color-danger: #c2453a;
 
   /* ── Type roles (значения приходят из next/font на <html>) ─────── */
   --font-display: var(--font-unbounded), "Unbounded", system-ui, sans-serif;
@@ -64,6 +84,12 @@
 
 @layer utilities {
   .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Все числа (Brier, %, ранги, счётчики) — JetBrains Mono + табличные цифры.
+     DESIGN.md: единый приборный набор для чисел. */
+  .num {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
   .text-balance {

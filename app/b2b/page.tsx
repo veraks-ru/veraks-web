@@ -15,7 +15,10 @@ export default function B2bPage() {
   const [keys, setKeys] = useState<ApiApiKey[] | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
 
-  const load = () => getMyApiKeys().then((k) => setKeys(k ?? []));
+  const load = () =>
+    getMyApiKeys()
+      .then((k) => setKeys(k ?? []))
+      .catch(() => setKeys([]));
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -112,7 +115,7 @@ function CreateForm({ onIssued }: { onIssued: (secret: string) => void }) {
 function SecretReveal({ secret, onClose }: { secret: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="mt-4 rounded-[var(--radius-card)] border border-[#e0b45c] bg-[#fbf4e3] p-4">
+    <div className="mt-4 rounded-[var(--radius-card)] border border-[color:var(--color-warm)]/45 bg-[color:var(--color-warm)]/10 p-4">
       <p className="text-sm font-600">Скопируйте секрет — он показывается только сейчас</p>
       <div className="mt-2 flex items-center gap-2">
         <code className="flex-1 overflow-x-auto rounded-lg bg-white px-3 py-2 font-mono text-sm">

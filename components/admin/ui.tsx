@@ -80,7 +80,8 @@ type BtnTone = "primary" | "ghost" | "danger";
 const tones: Record<BtnTone, string> = {
   primary: "bg-graphite text-white hover:bg-black",
   ghost: "border border-line text-graphite hover:bg-paper",
-  danger: "border border-[#e0746a] text-[#c2453a] hover:bg-[#e0746a]/10",
+  danger:
+    "border border-[color:var(--color-danger)]/55 text-[color:var(--color-danger)] hover:bg-[color:var(--color-danger)]/10",
 };
 
 export function Btn({
@@ -119,7 +120,7 @@ export function Notice({ error, ok }: { error?: string | null; ok?: string | nul
       role={error ? "alert" : "status"}
       className={`mt-3 rounded-lg px-3 py-2 text-sm ${
         error
-          ? "bg-[#e0746a]/10 text-[#c2453a]"
+          ? "bg-[color:var(--color-danger)]/10 text-[color:var(--color-danger)]"
           : "bg-[color:var(--color-signal)]/12 text-[color:var(--color-signal-deep)]"
       }`}
     >

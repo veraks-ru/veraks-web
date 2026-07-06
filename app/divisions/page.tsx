@@ -14,19 +14,26 @@ export default function DivisionsPage() {
   const { me } = useAuth();
   const [season, setSeason] = useState<ApiSeason | null | undefined>(undefined);
   const [level, setLevel] = useState(1);
-  const [standings, setStandings] = useState<ApiDivisionStandings | null>(null);
+  // undefined — загрузка, null — пусто/404, стандинги — данные.
+  const [standings, setStandings] = useState<ApiDivisionStandings | null | undefined>(undefined);
+  const [stErr, setStErr] = useState(false);
 
   useEffect(() => {
-    listSeasons().then((s) => {
-      const items = s?.items ?? [];
-      setSeason(items.find((x) => x.status === "active") ?? items[0] ?? null);
-    });
+    listSeasons()
+      .then((s) => {
+        const items = s?.items ?? [];
+        setSeason(items.find((x) => x.status === "active") ?? items[0] ?? null);
+      })
+      .catch(() => setSeason(null));
   }, []);
 
   useEffect(() => {
     if (!season) return;
-    setStandings(null);
-    getDivisionStandings(season.id, level).then((d) => setStandings(d));
+    setStandings(undefined);
+    setStErr(false);
+    getDivisionStandings(season.id, level)
+      .then((d) => setStandings(d ?? null))
+      .catch(() => setStErr(true));
   }, [season, level]);
 
   return (
@@ -64,8 +71,12 @@ export default function DivisionsPage() {
             </div>
 
             <section className="mt-5 rounded-[var(--radius-card)] border border-line bg-surface p-5">
-              {standings === null ? (
+              {stErr ? (
+                <p className="py-4 text-sm text-slate">Не удалось загрузить дивизион.</p>
+              ) : standings === undefined ? (
                 <p className="py-4 text-sm text-slate">Загрузка…</p>
+              ) : standings === null ? (
+                <p className="py-4 text-sm text-slate">В этом дивизионе пока нет участников.</p>
               ) : (
                 <>
                   <p className="mb-3 text-sm font-600">{standings.title}</p>

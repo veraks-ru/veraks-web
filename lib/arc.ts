@@ -37,7 +37,11 @@ export function indexFromClient(
   const dy = cyPx - clientY; // вверх — положительное
 
   let angle = Math.atan2(dy, dx); // (-π, π]
-  if (angle < 0) angle = dx < 0 ? Math.PI : 0; // ниже центра — прижать к краю
+  if (angle < 0) {
+    // Ниже центра — прижать к ближайшему краю; строго под центром (dx===0) —
+    // к середине (50/50), а не к произвольному «Точно да».
+    angle = dx > 0 ? 0 : dx < 0 ? Math.PI : Math.PI / 2;
+  }
   const t = 1 - angle / Math.PI;
   return Math.max(0, Math.min(LAST, Math.round(t * LAST)));
 }

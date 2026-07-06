@@ -7,7 +7,7 @@ import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
 import { categoryTitle } from "@/lib/mock";
 import { resultVerdict } from "@/lib/mock-users";
-import { fmtBrier, fmtDate } from "@/lib/format";
+import { accuracyColor, fmtBrier, fmtDate } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
 
 export function ResolvedEvent({ event }: { event: PredictionEvent }) {
@@ -62,7 +62,7 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
                 <p className="text-xs text-slate">Оценка</p>
                 <p
                   className="font-display text-xl font-700"
-                  style={{ color: myBrier < 0.2 ? "var(--color-signal-deep)" : myBrier < 0.45 ? "#b56b1e" : "#c2453a" }}
+                  style={{ color: accuracyColor(myBrier) }}
                 >
                   {resultVerdict(myBrier)}
                 </p>
@@ -82,9 +82,11 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
         <section className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-6">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg font-600">Кто как предсказал</h2>
-            <p className="text-xs text-slate">
-              Средний Brier толпы <span className="font-mono font-700 tnum">{fmtBrier(crowdMeanBrier)}</span>
-            </p>
+            {total > 0 && (
+              <p className="text-xs text-slate">
+                Средний Brier толпы <span className="num font-700">{fmtBrier(crowdMeanBrier)}</span>
+              </p>
+            )}
           </div>
           <p className="mt-1 mb-5 text-sm text-slate">
             Уверенный промах стоит дорого — вот цена каждой градации при исходе «{outcome ? "ДА" : "НЕТ"}».
@@ -111,17 +113,22 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
 
 function Verdict({ outcome, event }: { outcome: boolean; event: PredictionEvent }) {
   const color = outcome ? "var(--color-warm)" : "var(--color-cool)";
+  const disputed = event.status === "disputed";
   return (
     <div
       className="mt-5 overflow-hidden rounded-[var(--radius-card)] border bg-surface p-6"
       style={{ borderColor: `color-mix(in srgb, ${color} 45%, var(--color-line))` }}
     >
-      <p className="text-xs font-600 tracking-wide text-slate uppercase">Исход по источнику</p>
+      <p className="text-xs font-600 tracking-wide text-slate uppercase">
+        {disputed ? "Исход по источнику (оспаривается)" : "Исход по источнику"}
+      </p>
       <p className="mt-1 font-display text-4xl font-700" style={{ color }}>
         {outcome ? "ДА" : "НЕТ"}
       </p>
       <p className="mt-2 text-sm text-slate">
-        Прошло окно оспаривания · засчитано в рейтинги
+        {disputed
+          ? "Исход оспаривается — решение арбитра ожидается"
+          : "Прошло окно оспаривания · засчитано в рейтинги"}
       </p>
     </div>
   );
@@ -146,7 +153,7 @@ function ScoringBars({
         const isMine = i === myIdx;
         return (
           <div key={g.grade} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className="text-[0.62rem] tnum text-slate">{Math.round(shares[i] * 100)}%</span>
+            <span className="num text-[0.62rem] text-slate">{Math.round(shares[i] * 100)}%</span>
             <span
               className="w-full rounded-t-md"
               style={{
@@ -157,7 +164,7 @@ function ScoringBars({
                 outlineOffset: "2px",
               }}
             />
-            <span className="font-mono text-[0.62rem] font-600 tnum text-graphite">{fmtBrier(bs)}</span>
+            <span className="num text-[0.62rem] font-600 text-graphite">{fmtBrier(bs)}</span>
             <span className="text-center text-[0.6rem] leading-tight text-slate">{g.short}</span>
           </div>
         );

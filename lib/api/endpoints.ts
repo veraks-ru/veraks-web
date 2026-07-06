@@ -52,8 +52,10 @@ export function listEvents(params: {
   return apiFetch<ApiEvent[]>(`/events?${q.toString()}`);
 }
 
+// 422 — невалидный (не-UUID) идентификатор в пути: трактуем как «не найдено»,
+// а не как ошибку, чтобы страница показала notFound, а не экран сбоя.
 export const getEvent = (id: string) =>
-  apiFetch<ApiEvent>(`/events/${id}`, { allow: [404] });
+  apiFetch<ApiEvent>(`/events/${id}`, { allow: [404, 422] });
 
 /** Сводка толпы. Скрыта до закрытия приёма → null на 409/404. */
 export const getPredictionSummary = (id: string) =>

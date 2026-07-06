@@ -23,9 +23,22 @@ export function Disputes({ event }: { event: PredictionEvent }) {
   const [evidence, setEvidence] = useState("");
   const act = useAction();
 
-  const load = () => listDisputes(event.id).then((d) => setDisputes(d ?? []));
+  const load = () =>
+    listDisputes(event.id)
+      .then((d) => setDisputes(d ?? []))
+      .catch(() => setDisputes([]));
   useEffect(() => {
-    load();
+    let alive = true;
+    listDisputes(event.id)
+      .then((d) => {
+        if (alive) setDisputes(d ?? []);
+      })
+      .catch(() => {
+        if (alive) setDisputes([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, [event.id]);
 
   const windowOpen =

@@ -21,7 +21,10 @@ export default function LeaguesPage() {
   const [leagues, setLeagues] = useState<ApiLeague[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const load = () => getMyLeagues().then((l) => setLeagues(l ?? []));
+  const load = () =>
+    getMyLeagues()
+      .then((l) => setLeagues(l ?? []))
+      .catch(() => setLeagues([]));
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -169,11 +172,15 @@ function LeagueCard({
   onToggle: () => void;
   onLeft: () => void;
 }) {
-  const [standings, setStandings] = useState<ApiLeagueStandings | null>(null);
+  const [standings, setStandings] = useState<ApiLeagueStandings | null | undefined>(undefined);
   const act = useAction();
 
   useEffect(() => {
-    if (open && !standings) getLeagueStandings(league.id).then((s) => setStandings(s));
+    if (open && standings === undefined) {
+      getLeagueStandings(league.id)
+        .then((s) => setStandings(s ?? null))
+        .catch(() => setStandings(null));
+    }
   }, [open, standings, league.id]);
 
   return (
@@ -204,8 +211,10 @@ function LeagueCard({
       </div>
       {open && (
         <div className="mt-4">
-          {standings === null ? (
+          {standings === undefined ? (
             <p className="text-sm text-slate">Загрузка…</p>
+          ) : standings === null ? (
+            <p className="text-sm text-slate">Лидерборд лиги недоступен.</p>
           ) : (
             <StandingsTable rows={standings.rows} />
           )}

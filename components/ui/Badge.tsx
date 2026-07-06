@@ -13,10 +13,10 @@ type Tone = "open" | "soon" | "resolving" | "yes" | "no" | "neutral";
 
 const TONES: Record<Tone, string> = {
   open: "bg-[color:var(--color-signal)]/12 text-[color:var(--color-signal-deep)]",
-  soon: "bg-[color:var(--color-warm)]/15 text-[#b56b1e]",
-  resolving: "bg-[color:var(--color-cool)]/15 text-[#4654c4]",
-  yes: "bg-[color:var(--color-warm)]/15 text-[#b56b1e]",
-  no: "bg-[color:var(--color-cool)]/15 text-[#4654c4]",
+  soon: "bg-[color:var(--color-warm)]/15 text-[color:var(--color-warm-ink)]",
+  resolving: "bg-[color:var(--color-cool)]/15 text-[color:var(--color-cool-ink)]",
+  yes: "bg-[color:var(--color-warm)]/15 text-[color:var(--color-warm-ink)]",
+  no: "bg-[color:var(--color-cool)]/15 text-[color:var(--color-cool-ink)]",
   neutral: "bg-paper text-slate",
 };
 

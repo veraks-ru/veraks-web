@@ -6,6 +6,7 @@ export const LEGAL_DOCS = [
   { slug: "oferta", title: "Пользовательское соглашение (оферта)", short: "Оферта" },
   { slug: "reglament", title: "Регламент публичного конкурса", short: "Регламент конкурса" },
   { slug: "politika", title: "Политика разрешения событий и споров", short: "Разрешение споров" },
+  { slug: "pdn", title: "Политика обработки персональных данных", short: "Персональные данные" },
 ] as const;
 
 export type LegalSlug = (typeof LEGAL_DOCS)[number]["slug"];

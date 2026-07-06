@@ -17,13 +17,13 @@ export default function AdminDashboard() {
   const recompute = useAction();
 
   useEffect(() => {
-    Promise.all([listEvents({ limit: 200 }), listCategories(), listSeasons()]).then(
-      ([e, c, s]) => {
+    Promise.all([listEvents({ limit: 200 }), listCategories(), listSeasons()])
+      .then(([e, c, s]) => {
         setEvents(e ?? []);
         setCats((c ?? []).length);
         setSeasons((s?.items ?? []).length);
-      },
-    );
+      })
+      .catch(() => setEvents([]));
   }, []);
 
   const by = (st: string) => (events ?? []).filter((e) => e.status === st).length;

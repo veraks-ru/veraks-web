@@ -20,23 +20,38 @@ export function NotificationBell() {
   const [items, setItems] = useState<ApiNotification[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const seen = useRef<Set<string>>(new Set());
+  // open держим в ref, чтобы сокет не пересоздавался на каждый клик по колокольчику.
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const refreshCount = useCallback(async () => {
-    const r = await getUnreadCount();
-    setUnread(r?.unread ?? 0);
+    try {
+      const r = await getUnreadCount();
+      setUnread(r?.unread ?? 0);
+    } catch {
+      /* сеть недоступна — счётчик не критичен */
+    }
   }, []);
 
   const loadList = useCallback(async () => {
-    const n = await getNotifications();
-    setItems(n ?? []);
+    try {
+      const n = await getNotifications();
+      setItems(n ?? []);
+    } catch {
+      setItems([]); // не крутить «Загрузка…» вечно при ошибке
+    }
   }, []);
 
   useEffect(() => {
     if (!me) return;
-    refreshCount();
+    void refreshCount();
   }, [me, refreshCount]);
 
-  // Реал-тайм пуш через goctopus.
+  // Реал-тайм пуш через goctopus. Зависит только от наличия сессии — открытие
+  // выпадашки не рвёт сокет (open читаем из ref).
   useEffect(() => {
     if (!me || !WS_URL) return;
     let socket: WebSocket | null = null;
@@ -57,8 +72,9 @@ export function NotificationBell() {
         seen.current.add(d.id);
         setUnread((n) => n + 1);
         setToast(d.payload?.title ?? "Новое уведомление");
-        setTimeout(() => setToast(null), 4000);
-        if (open) loadList();
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToast(null), 4000);
+        if (openRef.current) void loadList();
       };
       socket.onclose = () => {
         if (!closed) retry = setTimeout(connect, 2000);
@@ -68,9 +84,10 @@ export function NotificationBell() {
     return () => {
       closed = true;
       clearTimeout(retry);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
       socket?.close();
     };
-  }, [me, open, loadList]);
+  }, [me, loadList]);
 
   if (!me) return null;
 

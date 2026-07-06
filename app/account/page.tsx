@@ -145,7 +145,9 @@ function ProfileSection() {
 function PayoutsSection() {
   const [payouts, setPayouts] = useState<ApiPayout[] | null>(null);
   useEffect(() => {
-    getMyPayouts().then((p) => setPayouts(p ?? []));
+    getMyPayouts()
+      .then((p) => setPayouts(p ?? []))
+      .catch(() => setPayouts([]));
   }, []);
 
   return (
@@ -182,7 +184,10 @@ function SubscriptionSection() {
   const [sub, setSub] = useState<ApiSubscription | null | undefined>(undefined);
   const act = useAction();
 
-  const reload = () => getMySubscription().then((s) => setSub(s ?? null));
+  const reload = () =>
+    getMySubscription()
+      .then((s) => setSub(s ?? null))
+      .catch(() => setSub(null));
   useEffect(() => {
     reload();
   }, []);
@@ -191,7 +196,7 @@ function SubscriptionSection() {
     && new Date(sub.current_period_end).getTime() > Date.now();
 
   return (
-    <Panel title="Подписка" desc="Голосовать и предлагать события можно с активной подпиской">
+    <Panel title="Подписка" desc="Расширенная аналитика и предложение событий — с активной подпиской">
       {sub === undefined ? (
         <div className="flex justify-center py-6">
           <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />

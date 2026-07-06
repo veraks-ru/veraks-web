@@ -63,13 +63,13 @@ function Hero() {
             Смотреть события
           </ButtonLink>
           <ButtonLink href="/pricing" variant="ghost-dark" size="lg">
-            Тарифы для голосования
+            Тарифы подписки
           </ButtonLink>
         </div>
 
         <p className="mt-5 text-sm text-haze-dim">
-          Смотреть консенсус и трек-рекорды — бесплатно. Чтобы голосовать самому, нужна
-          подписка от 99 ₽.{" "}
+          Участвовать в прогнозах — бесплатно. Подписка открывает расширенную аналитику
+          и предложение событий.{" "}
           <Link href="/pricing" className="text-signal underline-offset-2 hover:underline">
             Тарифы →
           </Link>

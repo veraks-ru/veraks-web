@@ -78,7 +78,7 @@ export default function AdminPrizesPage() {
       </div>
 
       {!isAdmin && (
-        <p className="rounded-lg bg-[#e0746a]/10 px-3 py-2 text-sm text-[#c2453a]">
+        <p className="rounded-lg bg-[color:var(--color-danger)]/10 px-3 py-2 text-sm text-[color:var(--color-danger)]">
           Управление фондом и выплатами доступно роли admin.
         </p>
       )}
@@ -164,6 +164,17 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
   const [amount, setAmount] = useState("10000");
   const create = useAction();
   const row = useAction();
+  // Спиннер — только у нажатой строки, а не у всех выплат сразу.
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const runRow = async (id: string, fn: () => Promise<unknown>, msg: string) => {
+    setBusyId(id);
+    try {
+      const r = await row.run(fn, msg);
+      if (r) onDone();
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <Panel title="Выплаты" desc="Создаёт один администратор, подтверждает — другой">
@@ -181,14 +192,10 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
               {isAdmin && (
                 <div className="flex gap-2">
                   {p.status === "pending" && (
-                    <Btn tone="primary" loading={row.loading} onClick={async () => {
-                      const r = await row.run(() => approvePayout(p.id), "Подтверждена"); if (r) onDone();
-                    }}>Подтвердить</Btn>
+                    <Btn tone="primary" loading={busyId === p.id} onClick={() => runRow(p.id, () => approvePayout(p.id), "Подтверждена")}>Подтвердить</Btn>
                   )}
                   {p.status === "approved" && (
-                    <Btn tone="primary" loading={row.loading} onClick={async () => {
-                      const r = await row.run(() => dispatchPayout(p.id), "Отправлена провайдеру"); if (r) onDone();
-                    }}>Отправить</Btn>
+                    <Btn tone="primary" loading={busyId === p.id} onClick={() => runRow(p.id, () => dispatchPayout(p.id), "Отправлена провайдеру")}>Отправить</Btn>
                   )}
                 </div>
               )}
