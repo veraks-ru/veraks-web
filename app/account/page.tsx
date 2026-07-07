@@ -183,14 +183,45 @@ function PayoutsSection() {
 function SubscriptionSection() {
   const { me, refresh } = useAuth();
   const [sub, setSub] = useState<ApiSubscription | null | undefined>(undefined);
+  const [paid, setPaid] = useState<"1" | "0" | null>(null);
+  const [activating, setActivating] = useState(false);
   const act = useAction();
 
   const reload = () =>
     getMySubscription()
       .then((s) => setSub(s ?? null))
       .catch(() => setSub(null));
+
   useEffect(() => {
-    reload();
+    const p = new URLSearchParams(window.location.search).get("paid");
+    const flag = p === "1" ? "1" : p === "0" ? "0" : null;
+    setPaid(flag);
+    let cancelled = false;
+    // После оплаты подписку активирует вебхук асинхронно — опрашиваем статус,
+    // чтобы показать «активна» сразу, без перезагрузки страницы.
+    async function pollUntilActive() {
+      setActivating(true);
+      for (let i = 0; i < 10 && !cancelled; i++) {
+        const s = await getMySubscription().catch(() => null);
+        if (cancelled) return;
+        setSub(s ?? null);
+        if (s && s.status === "active") {
+          await refresh();
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      if (!cancelled) {
+        setActivating(false);
+        history.replaceState(null, "", "/account");
+      }
+    }
+    if (flag === "1") pollUntilActive();
+    else reload();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const active = sub && sub.status === "active" && sub.current_period_end
@@ -198,6 +229,25 @@ function SubscriptionSection() {
 
   return (
     <Panel title="Подписка" desc="Расширенная аналитика и предложение событий — с активной подпиской">
+      {paid === "1" && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-[color:var(--color-signal)]/40 bg-[color:var(--color-signal)]/[0.08] px-4 py-3 text-sm font-600 text-[color:var(--color-signal-deep)]">
+          {active ? (
+            <>✓ Оплата прошла. Подписка активна.</>
+          ) : activating ? (
+            <>
+              <Spinner className="size-4" />
+              Оплата прошла — активируем подписку…
+            </>
+          ) : (
+            <>Оплата прошла. Подписка активируется — обновите страницу через минуту.</>
+          )}
+        </div>
+      )}
+      {paid === "0" && (
+        <div className="mb-5 rounded-xl bg-[color:var(--color-danger)]/10 px-4 py-3 text-sm text-[color:var(--color-danger)]">
+          Оплата не прошла. Можно попробовать ещё раз — выберите тариф на «Тарифах».
+        </div>
+      )}
       {sub === undefined ? (
         <div className="flex justify-center py-6">
           <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
