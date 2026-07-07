@@ -248,6 +248,7 @@ function SubscriptionSection() {
           Оплата не прошла. Можно попробовать ещё раз — выберите тариф на «Тарифах».
         </div>
       )}
+      <Notice error={act.error} ok={act.okMsg} />
       {sub === undefined ? (
         <div className="flex justify-center py-6">
           <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
@@ -300,7 +301,7 @@ function SubscriptionSection() {
                 onClick={async () => {
                   const r = await act.run(
                     () => refundSubscription(sub.id),
-                    "Оплата возвращена",
+                    "Оплата возвращена покупателю",
                   );
                   if (r) {
                     await reload();
@@ -312,7 +313,12 @@ function SubscriptionSection() {
               </Btn>
             )}
           </div>
-          <Notice error={act.error} ok={act.okMsg} />
+          {me?.role === "admin" && (
+            <p className="mt-3 text-xs text-slate">
+              «Отменить подписку» — прекратить доступ (без возврата денег). «Вернуть
+              последнюю оплату» — возврат денег покупателю через банк (для поддержки).
+            </p>
+          )}
         </div>
       )}
     </Panel>
