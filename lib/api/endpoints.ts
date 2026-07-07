@@ -132,6 +132,10 @@ export const startSubscription = (plan: string) =>
 export const cancelSubscription = (id: string) =>
   apiFetch<ApiSubscription>(`/billing/subscriptions/${id}/cancel`, { method: "POST" });
 
+// Возврат последней оплаты подписки (только админ).
+export const refundSubscription = (id: string) =>
+  apiFetch<{ status: string }>(`/billing/subscriptions/${id}/refund`, { method: "POST" });
+
 /* ── Кабинет пользователя ── */
 
 export const getMyPayouts = () =>

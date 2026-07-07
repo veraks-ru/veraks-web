@@ -9,7 +9,9 @@ import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate } from "@/lib/format";
 import {
   getMySubscription,
+  startSubscription,
   cancelSubscription,
+  refundSubscription,
   getMyPayouts,
   updateMe,
 } from "@/lib/api/endpoints";
@@ -180,9 +182,26 @@ function PayoutsSection() {
 }
 
 function SubscriptionSection() {
-  const { refresh } = useAuth();
+  const { me, refresh } = useAuth();
   const [sub, setSub] = useState<ApiSubscription | null | undefined>(undefined);
+  const [paying, setPaying] = useState(false);
   const act = useAction();
+
+  // Повторная (или продолженная) оплата: переиспользует незавершённую подписку.
+  async function payAgain(plan: string) {
+    setPaying(true);
+    try {
+      const res = await startSubscription(plan);
+      if (res?.confirmation_url) {
+        window.location.href = res.confirmation_url;
+        return;
+      }
+      await reload();
+      await refresh();
+    } finally {
+      setPaying(false);
+    }
+  }
 
   const reload = () =>
     getMySubscription()
@@ -223,8 +242,20 @@ function SubscriptionSection() {
               value={sub.current_period_end ? fmtDate(sub.current_period_end) : "—"}
             />
           </div>
-          {active && (
-            <div className="mt-5">
+          {(sub.status === "incomplete" || sub.status === "past_due") && (
+            <p className="mt-4 text-sm text-slate">
+              {sub.status === "incomplete"
+                ? "Оплата не завершена. Можно продолжить оплату — доступ откроется сразу после успешного платежа."
+                : "Оплата просрочена. Продлите доступ повторной оплатой."}
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {(sub.status === "incomplete" || sub.status === "past_due") && (
+              <Btn loading={paying} onClick={() => payAgain(sub.plan)}>
+                {sub.status === "incomplete" ? "Продолжить оплату" : "Оплатить"}
+              </Btn>
+            )}
+            {active && (
               <Btn
                 tone="danger"
                 loading={act.loading}
@@ -238,9 +269,26 @@ function SubscriptionSection() {
               >
                 Отменить подписку
               </Btn>
-              <Notice error={act.error} ok={act.okMsg} />
-            </div>
-          )}
+            )}
+            {active && me?.role === "admin" && (
+              <Btn
+                loading={act.loading}
+                onClick={async () => {
+                  const r = await act.run(
+                    () => refundSubscription(sub.id),
+                    "Оплата возвращена",
+                  );
+                  if (r) {
+                    await reload();
+                    await refresh();
+                  }
+                }}
+              >
+                Вернуть последнюю оплату
+              </Btn>
+            )}
+          </div>
+          <Notice error={act.error} ok={act.okMsg} />
         </div>
       )}
     </Panel>
