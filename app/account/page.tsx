@@ -282,6 +282,7 @@ function SubscriptionSection() {
               onClick={async () => {
                 const r = await act.run(() => cancelSubscription(sub.id), "Подписка отменена");
                 if (r) {
+                  setPaid(null);
                   await reload();
                   await refresh();
                 }
@@ -304,6 +305,7 @@ function SubscriptionSection() {
                     "Оплата возвращена покупателю",
                   );
                   if (r) {
+                    setPaid(null);
                     await reload();
                     await refresh();
                   }
@@ -313,12 +315,6 @@ function SubscriptionSection() {
               </Btn>
             )}
           </div>
-          {me?.role === "admin" && (
-            <p className="mt-3 text-xs text-slate">
-              «Отменить подписку» — прекратить доступ (без возврата денег). «Вернуть
-              последнюю оплату» — возврат денег покупателю через банк (для поддержки).
-            </p>
-          )}
         </div>
       )}
     </Panel>
