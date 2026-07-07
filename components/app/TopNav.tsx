@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/leaderboards", label: "Лидерборды" },
   { href: "/divisions", label: "Дивизионы" },
   { href: "/seasons", label: "Сезон" },
+  { href: "/pricing", label: "Тарифы" },
 ];
 
 /** Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел. */
