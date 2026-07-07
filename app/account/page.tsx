@@ -9,7 +9,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate } from "@/lib/format";
 import {
   getMySubscription,
-  startSubscription,
   cancelSubscription,
   refundSubscription,
   getMyPayouts,
@@ -184,24 +183,7 @@ function PayoutsSection() {
 function SubscriptionSection() {
   const { me, refresh } = useAuth();
   const [sub, setSub] = useState<ApiSubscription | null | undefined>(undefined);
-  const [paying, setPaying] = useState(false);
   const act = useAction();
-
-  // Повторная (или продолженная) оплата: переиспользует незавершённую подписку.
-  async function payAgain(plan: string) {
-    setPaying(true);
-    try {
-      const res = await startSubscription(plan);
-      if (res?.confirmation_url) {
-        window.location.href = res.confirmation_url;
-        return;
-      }
-      await reload();
-      await refresh();
-    } finally {
-      setPaying(false);
-    }
-  }
 
   const reload = () =>
     getMySubscription()
@@ -220,10 +202,10 @@ function SubscriptionSection() {
         <div className="flex justify-center py-6">
           <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
         </div>
-      ) : !sub || sub.status === "expired" || sub.status === "canceled" ? (
+      ) : !active || !sub ? (
         <div>
           <p className="text-sm text-slate">
-            {sub ? `Подписка ${SUB_STATUS[sub.status]}.` : "Активной подписки нет."}
+            Активной подписки нет. Выберите тариф — доступ откроется сразу после оплаты.
           </p>
           <Link
             href="/pricing"
@@ -242,35 +224,27 @@ function SubscriptionSection() {
               value={sub.current_period_end ? fmtDate(sub.current_period_end) : "—"}
             />
           </div>
-          {(sub.status === "incomplete" || sub.status === "past_due") && (
-            <p className="mt-4 text-sm text-slate">
-              {sub.status === "incomplete"
-                ? "Оплата не завершена. Можно продолжить оплату — доступ откроется сразу после успешного платежа."
-                : "Оплата просрочена. Продлите доступ повторной оплатой."}
-            </p>
-          )}
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {(sub.status === "incomplete" || sub.status === "past_due") && (
-              <Btn loading={paying} onClick={() => payAgain(sub.plan)}>
-                {sub.status === "incomplete" ? "Продолжить оплату" : "Оплатить"}
-              </Btn>
-            )}
-            {active && (
-              <Btn
-                tone="danger"
-                loading={act.loading}
-                onClick={async () => {
-                  const r = await act.run(() => cancelSubscription(sub.id), "Подписка отменена");
-                  if (r) {
-                    await reload();
-                    await refresh();
-                  }
-                }}
-              >
-                Отменить подписку
-              </Btn>
-            )}
-            {active && me?.role === "admin" && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Btn
+              tone="danger"
+              loading={act.loading}
+              onClick={async () => {
+                const r = await act.run(() => cancelSubscription(sub.id), "Подписка отменена");
+                if (r) {
+                  await reload();
+                  await refresh();
+                }
+              }}
+            >
+              Отменить подписку
+            </Btn>
+            <Link
+              href="/pricing"
+              className="rounded-full border border-line px-4 py-2 text-sm font-600 text-graphite hover:bg-paper"
+            >
+              Сменить тариф
+            </Link>
+            {me?.role === "admin" && (
               <Btn
                 loading={act.loading}
                 onClick={async () => {
