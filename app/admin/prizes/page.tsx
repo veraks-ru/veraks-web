@@ -13,8 +13,16 @@ import type { ApiPayout, ApiPrizeFund, ApiSeason, ApiSeasonPrizeFund } from "@/l
 
 const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 const PAYOUT_LABEL: Record<string, string> = {
-  pending: "Создана", approved: "Подтверждена", processing: "В обработке", paid: "Выплачена", failed: "Ошибка",
+  pending: "Создана", approved: "Подтверждена", processing: "Отправлена в банк", paid: "Выплачена", failed: "Ошибка",
 };
+const PROVIDER_LABEL: Record<string, string> = {
+  jump: "Jump (СБП)", yookassa: "ЮKassa", tbank: "ТБанк",
+};
+// Ставка НДФЛ для призов — 13% (подтверждена юристом, июль 2026: публичный
+// конкурс по гл. 57 ГК, не рекламная акция). Поля формы редактируемы —
+// бэкенд принимает фактическую сумму удержания.
+const NDFL_RATE = 0.13;
+const fmtRub = (kop: number) => (kop / 100).toString();
 
 export default function AdminPrizesPage() {
   const { me } = useAuth();
@@ -161,8 +169,19 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
 }) {
   const [user, setUser] = useState("");
   const [fundId, setFundId] = useState("");
-  const [amount, setAmount] = useState("10000");
+  const [gross, setGross] = useState("10000");
+  const [tax, setTax] = useState(fmtRub(Math.floor(10000 * 100 * NDFL_RATE)));
   const create = useAction();
+  // Брутто списывается с фонда; НДФЛ подставляется по ставке, но редактируем
+  // (прогрессивная шкала/уточнение бухгалтерии). К выплате = брутто − НДФЛ.
+  const grossKop = Math.round(Number(gross) * 100) || 0;
+  const taxKop = Math.round(Number(tax) * 100) || 0;
+  const netKop = Math.max(grossKop - taxKop, 0);
+  const onGrossChange = (v: string) => {
+    setGross(v);
+    const g = Math.round(Number(v) * 100) || 0;
+    setTax(fmtRub(Math.floor(g * NDFL_RATE)));
+  };
   const row = useAction();
   // Спиннер — только у нажатой строки, а не у всех выплат сразу.
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -185,17 +204,31 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
               <div>
                 <p className="font-600">@{names.get(p.user_id) ?? p.user_id.slice(0, 8)} — {rub(p.amount_kopecks)}</p>
                 <p className="mt-0.5 text-xs text-slate">
-                  {PAYOUT_LABEL[p.status]}{p.approved_by ? " · подтверждена" : ""}
+                  {PAYOUT_LABEL[p.status]}
+                  {p.tax_withheld_kopecks > 0 ? ` · НДФЛ ${rub(p.tax_withheld_kopecks)}` : ""}
                   {p.created_by === meId ? " · создана вами" : ""}
                 </p>
+                {p.provider && (
+                  <p className="mt-0.5 text-xs text-slate tnum">
+                    {PROVIDER_LABEL[p.provider] ?? p.provider}
+                    {p.provider_payout_id ? ` · №${p.provider_payout_id}` : ""}
+                    {p.paid_at ? ` · выплачена ${new Date(p.paid_at).toLocaleDateString("ru-RU")}` : ""}
+                  </p>
+                )}
               </div>
               {isAdmin && (
-                <div className="flex gap-2">
+                <div className="flex flex-col items-end gap-1">
                   {p.status === "pending" && (
-                    <Btn tone="primary" loading={busyId === p.id} onClick={() => runRow(p.id, () => approvePayout(p.id), "Подтверждена")}>Подтвердить</Btn>
+                    <>
+                      <Btn tone="primary" loading={busyId === p.id} onClick={() => runRow(p.id, () => approvePayout(p.id), "Подтверждена — уйдёт в Jump автоматически")}>Подтвердить</Btn>
+                      <span className="text-[11px] text-slate">после подтверждения уйдёт в Jump автоматически</span>
+                    </>
                   )}
                   {p.status === "approved" && (
-                    <Btn tone="primary" loading={busyId === p.id} onClick={() => runRow(p.id, () => dispatchPayout(p.id), "Отправлена провайдеру")}>Отправить</Btn>
+                    <>
+                      <Btn loading={busyId === p.id} onClick={() => runRow(p.id, () => dispatchPayout(p.id), "Отправлена провайдеру")}>Отправить вручную</Btn>
+                      <span className="text-[11px] text-slate">воркер отправит сам в течение минуты</span>
+                    </>
                   )}
                 </div>
               )}
@@ -221,11 +254,15 @@ function PayoutsPanel({ payouts, funds, winners, names, seasonId, isAdmin, meId,
               {funds.map((f) => <option key={f.id} value={f.id}>{f.sponsor_name} ({rub(f.balance_kopecks)})</option>)}
             </select>
           </Field></div>
-          <div className="w-32"><Field label="Сумма, ₽"><input className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field></div>
+          <div className="w-32"><Field label="Приз (брутто), ₽"><input className={inputCls} value={gross} onChange={(e) => onGrossChange(e.target.value)} /></Field></div>
+          <div className="w-32"><Field label="НДФЛ (13%), ₽"><input className={inputCls} value={tax} onChange={(e) => setTax(e.target.value)} /></Field></div>
+          <div className="w-32"><Field label="К выплате, ₽"><input className={`${inputCls} bg-paper`} value={fmtRub(netKop)} disabled /></Field></div>
           <Btn tone="primary" loading={create.loading} onClick={async () => {
             if (!user || !fundId) { create.setError("Выберите победителя и фонд"); return; }
+            if (netKop <= 0) { create.setError("Сумма к выплате должна быть больше нуля"); return; }
             const r = await create.run(() => createPayout({
-              user_id: user, prize_fund_id: fundId, amount_kopecks: Math.round(Number(amount) * 100), season_id: seasonId ?? null,
+              user_id: user, prize_fund_id: fundId, amount_kopecks: netKop,
+              tax_withheld_kopecks: taxKop, season_id: seasonId ?? null,
             }), "Выплата создана (нужно подтверждение другим admin)");
             if (r) onDone();
           }}>Создать выплату</Btn>

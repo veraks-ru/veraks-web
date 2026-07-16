@@ -12,16 +12,19 @@ import {
   cancelSubscription,
   refundSubscription,
   getMyPayouts,
+  getMyPayoutRequisites,
+  saveMyPayoutRequisites,
   updateMe,
 } from "@/lib/api/endpoints";
 import { TARIFFS } from "@/lib/pricing";
-import type { ApiPayout, ApiSubscription } from "@/lib/api/dto";
+import { SBP_BANKS } from "@/lib/sbpBanks";
+import type { ApiPayout, ApiPayoutRequisites, ApiSubscription } from "@/lib/api/dto";
 
 const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 const PAYOUT_STATUS: Record<string, string> = {
   pending: "создана",
   approved: "подтверждена",
-  processing: "в обработке",
+  processing: "отправлена в банк (СБП)",
   paid: "выплачена",
   failed: "ошибка",
 };
@@ -80,6 +83,7 @@ export default function AccountPage() {
         <ProfileSection />
         <SubscriptionSection />
         <PayoutsSection />
+        <PayoutRequisitesSection />
 
         <Link
           href="/sponsor"
@@ -145,14 +149,24 @@ function ProfileSection() {
 
 function PayoutsSection() {
   const [payouts, setPayouts] = useState<ApiPayout[] | null>(null);
+  const [hasRequisites, setHasRequisites] = useState<boolean | null>(null);
   useEffect(() => {
     getMyPayouts()
       .then((p) => setPayouts(p ?? []))
       .catch(() => setPayouts([]));
+    getMyPayoutRequisites()
+      .then((r) => setHasRequisites(Boolean(r)))
+      .catch(() => setHasRequisites(null));
   }, []);
 
   return (
     <Panel title="Мои выплаты" desc="Призовые выплаты по итогам сезонов">
+      {payouts !== null && payouts.length > 0 && hasRequisites === false && (
+        <div className="mb-4 rounded-xl bg-[color:var(--color-signal)]/[0.08] px-4 py-3 text-sm text-[color:var(--color-signal-deep)]">
+          Чтобы получить приз, заполните реквизиты для выплат ниже — перевод
+          придёт по СБП автоматически после подтверждения выплаты.
+        </div>
+      )}
       {payouts === null ? (
         <div className="flex justify-center py-6">
           <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
@@ -175,6 +189,121 @@ function PayoutsSection() {
             </li>
           ))}
         </ul>
+      )}
+    </Panel>
+  );
+}
+
+function PayoutRequisitesSection() {
+  const [loaded, setLoaded] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [bankId, setBankId] = useState(SBP_BANKS[0].id);
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const act = useAction();
+
+  useEffect(() => {
+    getMyPayoutRequisites()
+      .then((r: ApiPayoutRequisites | null) => {
+        if (r) {
+          setPhone(r.sbp_phone);
+          setBankId(r.sbp_bank_id);
+          setLastName(r.last_name);
+          setFirstName(r.first_name);
+          setMiddleName(r.middle_name ?? "");
+        }
+      })
+      .finally(() => setLoaded(true));
+  }, []);
+
+  async function save() {
+    if (!phone.trim() || !lastName.trim() || !firstName.trim()) {
+      act.setError("Телефон, фамилия и имя обязательны");
+      return;
+    }
+    await act.run(
+      () =>
+        saveMyPayoutRequisites({
+          sbp_phone: phone.trim(),
+          sbp_bank_id: bankId,
+          last_name: lastName.trim(),
+          first_name: firstName.trim(),
+          middle_name: middleName.trim() || null,
+        }),
+      "Реквизиты сохранены",
+    );
+  }
+
+  return (
+    <Panel
+      title="Реквизиты для выплат"
+      desc="Призы приходят по СБП на указанный номер. НДФЛ удерживает платформа"
+    >
+      {!loaded ? (
+        <div className="flex justify-center py-6">
+          <Spinner className="size-6 text-[color:var(--color-signal-deep)]" />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:max-w-md">
+          <Field label="Телефон (привязан к СБП)">
+            <input
+              className={inputCls}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+7 900 123-45-67"
+              inputMode="tel"
+              maxLength={20}
+            />
+          </Field>
+          <Field label="Банк (СБП)">
+            <select
+              className={inputCls}
+              value={bankId}
+              onChange={(e) => setBankId(e.target.value)}
+            >
+              {SBP_BANKS.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Фамилия">
+            <input
+              className={inputCls}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              maxLength={100}
+            />
+          </Field>
+          <Field label="Имя">
+            <input
+              className={inputCls}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              maxLength={100}
+            />
+          </Field>
+          <Field label="Отчество (если есть)">
+            <input
+              className={inputCls}
+              value={middleName}
+              onChange={(e) => setMiddleName(e.target.value)}
+              maxLength={100}
+            />
+          </Field>
+          <p className="text-xs text-slate">
+            ФИО должно совпадать с данными получателя в банке — банк сверяет
+            имя при переводе по СБП.
+          </p>
+          <div>
+            <Btn tone="primary" loading={act.loading} onClick={save}>
+              Сохранить
+            </Btn>
+            <Notice error={act.error} ok={act.okMsg} />
+          </div>
+        </div>
       )}
     </Panel>
   );

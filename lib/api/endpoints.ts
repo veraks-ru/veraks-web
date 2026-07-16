@@ -20,6 +20,7 @@ import type {
   ApiMe,
   ApiNotification,
   ApiPayout,
+  ApiPayoutRequisites,
   ApiPlan,
   ApiPrediction,
   ApiPredictionSummary,
@@ -140,6 +141,24 @@ export const refundSubscription = (id: string) =>
 
 export const getMyPayouts = () =>
   apiFetch<ApiPayout[]>("/users/me/payouts", { allow: [401] });
+
+// Реквизиты выплат (СБП): 404 — ещё не заполнены.
+export const getMyPayoutRequisites = () =>
+  apiFetch<ApiPayoutRequisites>("/users/me/payout-requisites", {
+    allow: [401, 404],
+  });
+
+export const saveMyPayoutRequisites = (body: {
+  sbp_phone: string;
+  sbp_bank_id: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string | null;
+}) =>
+  apiFetch<ApiPayoutRequisites>("/users/me/payout-requisites", {
+    method: "PUT",
+    body,
+  });
 
 export const updateMe = (display_name: string) =>
   apiFetch<ApiMe>("/users/me", { method: "PATCH", body: { display_name } });

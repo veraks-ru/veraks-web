@@ -176,6 +176,20 @@ export interface ApiPayout {
   created_by: string;
   approved_by: string | null;
   ledger_transaction_id: string | null;
+  provider: string | null;
+  provider_payout_id: string | null;
+  created_at: string;
+  paid_at: string | null;
+}
+
+export interface ApiPayoutRequisites {
+  id: string;
+  sbp_phone: string;
+  sbp_bank_id: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string | null;
+  updated_at: string;
 }
 
 export interface ApiSeasonPrizeFund {
