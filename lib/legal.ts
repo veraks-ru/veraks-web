@@ -11,6 +11,23 @@ export const LEGAL_DOCS = [
 
 export type LegalSlug = (typeof LEGAL_DOCS)[number]["slug"];
 
+/**
+ * Сопоставление серверных ключей документа согласия (`missing_consents[].document`
+ * из `GET /auth/me`, `POST /users/me/onboarding`) со слагами страниц `/legal/*`.
+ * Бэкенд называет оферту "offer" (веб — "oferta"); "pdn" совпадает буквально.
+ */
+export const CONSENT_DOCUMENT_SLUGS: Record<string, LegalSlug> = {
+  offer: "oferta",
+  pdn: "pdn",
+};
+
+/** Короткое название документа согласия для UI (чекбоксы онбординга и т.п.). */
+export function consentDocTitle(document: string): string {
+  const slug = CONSENT_DOCUMENT_SLUGS[document];
+  const doc = slug ? LEGAL_DOCS.find((d) => d.slug === slug) : undefined;
+  return doc?.short ?? document;
+}
+
 export interface LegalBlock {
   t: "meta" | "h" | "p";
   text: string;

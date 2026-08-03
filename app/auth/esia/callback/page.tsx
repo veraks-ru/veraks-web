@@ -28,8 +28,8 @@ function CallbackInner() {
       try {
         // Обмен кода на сессию: бэкенд ставит httpOnly-cookie в этом ответе.
         await apiFetch(`/auth/esia/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
-        await refresh();
-        router.replace("/events");
+        const me = await refresh();
+        router.replace(me?.needs_onboarding ? "/onboarding" : "/events");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Не удалось завершить вход");
       }

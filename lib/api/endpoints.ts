@@ -8,6 +8,8 @@ import type {
   ApiCalibration,
   ApiCategory,
   ApiComment,
+  ApiConsent,
+  ApiConsentRequirement,
   ApiDispute,
   ApiDivisionStandings,
   ApiIssuedKey,
@@ -162,6 +164,17 @@ export const saveMyPayoutRequisites = (body: {
 
 export const updateMe = (display_name: string) =>
   apiFetch<ApiMe>("/users/me", { method: "PATCH", body: { display_name } });
+
+/* ── Онбординг (псевдоним + согласия 152-ФЗ) ── */
+
+export const getMyConsents = () =>
+  apiFetch<ApiConsent[]>("/users/me/consents", { allow: [401] });
+
+export const submitOnboarding = (body: {
+  username?: string;
+  display_name?: string;
+  consents: ApiConsentRequirement[];
+}) => apiFetch<ApiMe>("/users/me/onboarding", { method: "POST", body });
 
 /* ── Оспаривание исхода (участник события) ── */
 

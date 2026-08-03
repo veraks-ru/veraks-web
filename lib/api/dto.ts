@@ -98,12 +98,28 @@ export interface ApiCalibration {
   bins: ApiCalibrationBin[];
 }
 
+/** Требование согласия: документ + версия редакции. */
+export interface ApiConsentRequirement {
+  document: string;
+  version: string;
+}
+
+/** Факт принятия согласия пользователем (GET /users/me/consents). */
+export interface ApiConsent extends ApiConsentRequirement {
+  accepted_at: string;
+  method: string;
+}
+
 export interface ApiMe {
   id: string;
   username: string;
   display_name: string;
   role: string;
   status: string;
+  // Присутствуют в ответах /auth/me и POST /users/me/onboarding; в ответе
+  // PATCH /users/me (прежний MeResponse) их нет.
+  needs_onboarding?: boolean;
+  missing_consents?: ApiConsentRequirement[];
 }
 
 export interface ApiPublicProfile {
