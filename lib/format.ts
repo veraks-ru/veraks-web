@@ -65,3 +65,11 @@ export const isClosingSoon = (iso: string, now: Date = new Date()): boolean => {
   const diffMs = new Date(iso).getTime() - now.getTime();
   return diffMs > 0 && diffMs < 86_400_000;
 };
+
+/** Словесная оценка результата прогноза по Brier. */
+export function resultVerdict(brierValue: number): string {
+  if (brierValue < 0.08) return "В точку";
+  if (brierValue < 0.2) return "Хорошо";
+  if (brierValue < 0.45) return "Неплохо";
+  return "Мимо";
+}

@@ -12,7 +12,7 @@ import { OutcomeBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, gradeIndexForProbability, indexOfGrade } from "@/lib/confidence";
 import { ece as eceOf, calibrationVerdict } from "@/lib/calibration";
-import { categoryTitle } from "@/lib/mock";
+import { useCategoryMap } from "@/lib/api/useCategories";
 import { fmtBrier, fmtDate } from "@/lib/format";
 import type { CalibrationBucket, CategoryStat, HistoryItem } from "@/lib/types";
 import {
@@ -47,6 +47,7 @@ interface ProfileVM {
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const categoryMap = useCategoryMap();
   const [vm, setVm] = useState<ProfileVM | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "notfound" | "error">("loading");
 
@@ -297,7 +298,9 @@ export default function ProfilePage() {
                   return (
                     <li key={c.categorySlug}>
                       <div className="flex items-baseline justify-between">
-                        <span className="text-sm font-600">{categoryTitle(c.categorySlug)}</span>
+                        <span className="text-sm font-600">
+                          {categoryMap.get(c.categorySlug) ?? c.categorySlug}
+                        </span>
                         <span className="text-xs tnum text-slate">
                           Brier {fmtBrier(c.meanBrier)} · {c.nResolved}
                         </span>

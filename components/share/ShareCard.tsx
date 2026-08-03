@@ -1,7 +1,6 @@
 import { OracleArc } from "@/components/brand/OracleArc";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
-import { resultVerdict } from "@/lib/mock-users";
-import { fmtBrier } from "@/lib/format";
+import { fmtBrier, resultVerdict } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
 
 /**

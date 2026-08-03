@@ -5,12 +5,12 @@ import { EventComments } from "@/components/events/EventComments";
 import { CategoryChip } from "@/components/ui/Badge";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
-import { categoryTitle } from "@/lib/mock";
-import { resultVerdict } from "@/lib/mock-users";
-import { accuracyColor, fmtBrier, fmtDate } from "@/lib/format";
+import { useCategoryTitle } from "@/lib/api/useCategories";
+import { accuracyColor, fmtBrier, fmtDate, fmtPercent, resultVerdict } from "@/lib/format";
 import type { PredictionEvent } from "@/lib/types";
 
 export function ResolvedEvent({ event }: { event: PredictionEvent }) {
+  const categoryTitle = useCategoryTitle(event.categorySlug);
   const outcome = !!event.outcome;
   const o = outcome ? 1 : 0;
   const gradeBrier = (i: number) => (GRADES[i].probability - o) ** 2;
@@ -31,7 +31,7 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
         </Link>
 
         <div className="mt-5 flex items-center gap-2">
-          <CategoryChip title={categoryTitle(event.categorySlug)} />
+          <CategoryChip title={categoryTitle} />
           {event.resolvedAt && (
             <span className="text-xs text-slate">разрешено {fmtDate(event.resolvedAt)}</span>
           )}
@@ -153,7 +153,7 @@ function ScoringBars({
         const isMine = i === myIdx;
         return (
           <div key={g.grade} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className="num text-[0.62rem] text-slate">{Math.round(shares[i] * 100)}%</span>
+            <span className="num text-[0.62rem] text-slate">{fmtPercent(shares[i])}</span>
             <span
               className="w-full rounded-t-md"
               style={{

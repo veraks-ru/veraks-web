@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CategoryChip, StatusBadge, OutcomeBadge } from "@/components/ui/Badge";
 import { MiniConsensus } from "./MiniConsensus";
 import { crowdTotal } from "@/lib/crowd";
-import { categoryTitle } from "@/lib/mock";
+import { useCategoryTitle } from "@/lib/api/useCategories";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { deadlineLabel } from "@/lib/format";
 import { nPeople } from "@/lib/format";
@@ -22,6 +22,7 @@ function GradePill({ grade }: { grade: ConfidenceGrade }) {
 }
 
 export function EventCard({ event }: { event: PredictionEvent }) {
+  const categoryTitle = useCategoryTitle(event.categorySlug);
   const predicted = !!event.myGrade;
   const isResolved = event.status === "resolved";
   const isOpen = event.status === "open";
@@ -30,7 +31,7 @@ export function EventCard({ event }: { event: PredictionEvent }) {
   return (
     <article className="group flex flex-col rounded-[var(--radius-card)] border border-line bg-surface p-5 transition-shadow hover:shadow-[0_8px_30px_-18px_rgba(20,23,28,0.35)]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <CategoryChip title={categoryTitle(event.categorySlug)} />
+        <CategoryChip title={categoryTitle} />
         {isResolved && event.outcome !== undefined ? (
           <OutcomeBadge outcome={event.outcome} />
         ) : (

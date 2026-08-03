@@ -10,7 +10,7 @@ import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { EventComments } from "@/components/events/EventComments";
 import { CategoryChip, StatusBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { categoryTitle } from "@/lib/mock";
+import { useCategoryTitle } from "@/lib/api/useCategories";
 import type { PredictionEvent } from "@/lib/types";
 import {
   getEvent,
@@ -85,6 +85,7 @@ export default function EventPage() {
 }
 
 function PendingEvent({ event }: { event: PredictionEvent }) {
+  const categoryTitle = useCategoryTitle(event.categorySlug);
   return (
     <div className="min-h-dvh bg-paper">
       <TopNav active="/events" />
@@ -93,7 +94,7 @@ function PendingEvent({ event }: { event: PredictionEvent }) {
           ← Все события
         </Link>
         <div className="mt-5 flex items-center gap-2">
-          <CategoryChip title={categoryTitle(event.categorySlug)} />
+          <CategoryChip title={categoryTitle} />
           <StatusBadge status={event.status} />
         </div>
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 sm:text-3xl">
