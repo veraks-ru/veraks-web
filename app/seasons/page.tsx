@@ -52,7 +52,9 @@ export default function SeasonsPage() {
                 <li key={s.id} className="rounded-[var(--radius-card)] border border-line bg-surface p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-display text-lg font-600">{s.title}</p>
+                      <Link href={`/seasons/${s.slug}`} className="font-display text-lg font-600 hover:underline">
+                        {s.title}
+                      </Link>
                       <p className="mt-0.5 text-sm text-slate">
                         {fmtDate(s.starts_at)} — {fmtDate(s.ends_at)}
                       </p>
@@ -62,16 +64,16 @@ export default function SeasonsPage() {
                         {STATUS_LABEL[s.status]}
                       </span>
                       <Link
-                        href={`/seasons/${s.slug}/fund`}
+                        href={`/leaderboards?season=${s.slug}`}
                         className="text-sm font-600 text-slate hover:text-graphite"
                       >
-                        Фонд →
+                        Лидерборд →
                       </Link>
                       <Link
-                        href="/leaderboards"
+                        href={`/seasons/${s.slug}`}
                         className="text-sm font-700 text-graphite hover:underline"
                       >
-                        Лига →
+                        Правила и фонд →
                       </Link>
                     </div>
                   </div>

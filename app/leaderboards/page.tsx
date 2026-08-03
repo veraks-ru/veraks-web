@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { useAuth } from "@/components/app/AuthProvider";
@@ -16,8 +17,20 @@ import {
 } from "@/lib/api/endpoints";
 
 export default function LeaderboardsPage() {
+  return (
+    <Suspense fallback={null}>
+      <LeaderboardsInner />
+    </Suspense>
+  );
+}
+
+function LeaderboardsInner() {
   const { me } = useAuth();
-  const [scope, setScope] = useState<LeaderboardScope>("global");
+  // Сезон и вкладку можно предвыбрать ссылкой вида /leaderboards?season=slug
+  // (используется со страницы сезона).
+  const searchParams = useSearchParams();
+  const seasonSlugParam = searchParams.get("season");
+  const [scope, setScope] = useState<LeaderboardScope>(seasonSlugParam ? "season" : "global");
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [cat, setCat] = useState<string>("");
   // Активный сезон — из API (как в дивизионах/квалификации), не хардкод.
@@ -39,10 +52,13 @@ export default function LeaderboardsPage() {
     listSeasons()
       .then((s) => {
         const items = s?.items ?? [];
-        setSeason(items.find((x) => x.status === "active") ?? items[items.length - 1] ?? null);
+        const bySlug = seasonSlugParam
+          ? items.find((x) => x.slug === seasonSlugParam)
+          : undefined;
+        setSeason(bySlug ?? items.find((x) => x.status === "active") ?? items[items.length - 1] ?? null);
       })
       .catch(() => setSeason(null));
-  }, []);
+  }, [seasonSlugParam]);
 
   useEffect(() => {
     if (scope === "category" && !cat) return;

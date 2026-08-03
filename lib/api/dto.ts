@@ -137,7 +137,8 @@ export interface ApiSeason {
   starts_at: string;
   ends_at: string;
   status: "upcoming" | "active" | "finished";
-  league_config: unknown;
+  // Снапшот правил лиги — фиксируется при активации сезона, до этого null.
+  league_config: LeagueConfigInput | null;
   created_at: string;
   updated_at: string;
 }
