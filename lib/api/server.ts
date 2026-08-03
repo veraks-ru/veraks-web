@@ -14,7 +14,11 @@ import type { ApiCategory, ApiEvent } from "./dto";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
-/** Рендер страницы не ждёт медленный бэкенд дольше этого. */
+/**
+ * Таймаут одного запроса. getPublicEvent делает до двух запросов
+ * последовательно (событие, затем категории), поэтому худший случай ожидания
+ * — примерно 2×TIMEOUT_MS.
+ */
 const TIMEOUT_MS = 4000;
 
 type Fetched<T> = { ok: true; data: T } | { ok: false; status: number };

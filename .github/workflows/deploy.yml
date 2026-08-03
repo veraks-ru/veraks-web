@@ -50,6 +50,10 @@ jobs:
         with:
           context: .
           push: true
+          # Только NEXT_PUBLIC_* — они вшиваются в клиентский бандл. SITE_URL
+          # (metadataBase для OG-картинок) сюда добавлять НЕ надо: он читается
+          # на сервере в рантайме и задаётся окружением пода — см.
+          # infra/helm/veraks/templates/frontend.yaml.
           build-args: |
             NEXT_PUBLIC_API_BASE=${{ env.NEXT_PUBLIC_API_BASE }}
             NEXT_PUBLIC_GOCTOPUS_URL=${{ env.NEXT_PUBLIC_GOCTOPUS_URL }}
