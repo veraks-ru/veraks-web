@@ -27,6 +27,11 @@ const jetbrains = localFont({
 });
 
 export const metadata: Metadata = {
+  // База для абсолютных URL в OG/Twitter (иначе OG-картинки страниц уедут на
+  // localhost:3000). Значение вшивается на сборке — см. Dockerfile.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  ),
   title: "Веракс — биржа репутации предсказателей",
   description:
     "Прогнозируйте исходы реальных событий, накапливайте измеримый публичный трек-рекорд точности и соревнуйтесь в лидербордах.",
