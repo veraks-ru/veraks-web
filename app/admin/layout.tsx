@@ -24,9 +24,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="max-w-sm rounded-[var(--radius-card)] border border-line bg-surface p-8 text-center">
           <h1 className="font-display text-xl font-600">Нужны права</h1>
           <p className="mt-2 text-sm text-slate">
-            Управление доступно ролям editor / arbiter / admin. Войдите под админ-аккаунтом
-            (в демо — <span className="font-600">kalibr</span> или{" "}
-            <span className="font-600">mediana</span>).
+            Управление доступно ролям editor / arbiter / admin. Войдите под аккаунтом с
+            соответствующей ролью.
           </p>
           {!me ? (
             <Link
