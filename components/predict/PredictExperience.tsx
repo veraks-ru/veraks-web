@@ -8,8 +8,8 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { putPrediction } from "@/lib/api/endpoints";
-import { categoryTitle } from "@/lib/mock";
-import { deadlineLabel, nPeople } from "@/lib/format";
+import { useCategoryTitle } from "@/lib/api/useCategories";
+import { deadlineLabel } from "@/lib/format";
 import { useAuth } from "@/components/app/AuthProvider";
 import type { PredictionEvent } from "@/lib/types";
 
@@ -17,6 +17,7 @@ type Phase = "edit" | "submitting" | "done";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
   const { me } = useAuth();
+  const categoryTitle = useCategoryTitle(event.categorySlug);
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
   const [chosen, setChosen] = useState<number | null>(initial);
   const [phase, setPhase] = useState<Phase>(event.myGrade ? "done" : "edit");
@@ -52,12 +53,10 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
 
         <div className="mt-6 flex items-center gap-2 text-xs">
           <span className="rounded-full bg-white/10 px-2.5 py-1 font-600 text-haze">
-            {categoryTitle(event.categorySlug)}
+            {categoryTitle}
           </span>
           <span className="text-haze-dim">·</span>
           <span className="font-600 text-warm">{deadlineLabel(event.closesAt)}</span>
-          <span className="text-haze-dim">·</span>
-          <span className="tnum text-haze-dim">{nPeople(event.forecasters)}</span>
         </div>
 
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 text-balance sm:text-[1.75rem]">
