@@ -22,6 +22,12 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Отменено", annulled: "Аннулировано",
 };
 
+const DISPUTE_STATUS_LABEL: Record<string, string> = {
+  open: "открыт", under_review: "на рассмотрении",
+  accepted: "принят", rejected: "отклонён",
+  voided: "снят (событие аннулировано)",
+};
+
 /** Статусы, из которых событие можно аннулировать (исход уже зафиксирован). */
 const ANNULLABLE = ["resolved", "disputed"];
 
@@ -313,7 +319,7 @@ function DisputeRow({ d, onDone }: { d: ApiDispute; onDone: () => void }) {
     <li className="rounded-xl border border-line p-3.5">
       <p className="text-sm"><b>{d.reason}</b></p>
       {d.evidence && <p className="mt-0.5 text-xs text-slate">{d.evidence}</p>}
-      <p className="mt-1 text-xs text-slate">статус: {d.status}</p>
+      <p className="mt-1 text-xs text-slate">статус: {DISPUTE_STATUS_LABEL[d.status] ?? d.status}</p>
       {pending && (
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <Field label="Новый исход (если принять)">

@@ -169,7 +169,8 @@ export interface ApiDispute {
   raised_by: string;
   reason: string;
   evidence: string;
-  status: "open" | "under_review" | "accepted" | "rejected";
+  /** `voided` — спор снят вместе с аннулированием события (предмета спора нет). */
+  status: "open" | "under_review" | "accepted" | "rejected" | "voided";
   decided_by: string | null;
   decision_notes: string;
   created_at: string;

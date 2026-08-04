@@ -14,6 +14,8 @@ const DISPUTE_STATUS: Record<string, string> = {
   under_review: "на рассмотрении",
   accepted: "принят",
   rejected: "отклонён",
+  // Спор снят вместе с аннулированием события: по существу его не решали.
+  voided: "снят (событие аннулировано)",
 };
 
 export function Disputes({ event }: { event: PredictionEvent }) {
