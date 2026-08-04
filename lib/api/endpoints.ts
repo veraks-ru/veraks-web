@@ -165,6 +165,10 @@ export const saveMyPayoutRequisites = (body: {
 export const updateMe = (display_name: string) =>
   apiFetch<ApiMe>("/users/me", { method: "PATCH", body: { display_name } });
 
+// Самостоятельное удаление аккаунта (152-ФЗ) — необратимо, см. /account.
+export const deleteMyAccount = () =>
+  apiFetch<null>("/users/me", { method: "DELETE" });
+
 /* ── Онбординг (псевдоним + согласия 152-ФЗ) ── */
 
 export const getMyConsents = () =>

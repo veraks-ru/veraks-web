@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  deleteMyAccount,
   getMe,
   getMySubscription,
   isSubscriptionActive,
@@ -17,6 +18,7 @@ interface AuthState {
   loading: boolean;
   refresh: () => Promise<ApiMe | null>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -25,6 +27,7 @@ const AuthContext = createContext<AuthState>({
   loading: true,
   refresh: async () => null,
   signOut: async () => {},
+  deleteAccount: async () => {},
 });
 
 // Страницы, доступные до завершения онбординга (псевдоним + согласия
@@ -82,6 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSubscribed(false);
   }, []);
 
+  // Самостоятельное удаление аккаунта (152-ФЗ). В отличие от signOut ошибку
+  // НЕ глотаем — вызывающая сторона (кнопка в «Опасной зоне») должна её
+  // показать пользователю и не редиректить при сбое запроса.
+  const deleteAccount = useCallback(async () => {
+    await deleteMyAccount();
+    setMe(null);
+    setSubscribed(false);
+  }, []);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -96,7 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loading, me, pathname, router]);
 
   return (
-    <AuthContext.Provider value={{ me, subscribed, loading, refresh, signOut }}>
+    <AuthContext.Provider
+      value={{ me, subscribed, loading, refresh, signOut, deleteAccount }}
+    >
       {children}
     </AuthContext.Provider>
   );

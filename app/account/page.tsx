@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
@@ -110,8 +111,76 @@ export default function AccountPage() {
           </span>
           <span className="text-[color:var(--color-signal-deep)]">→</span>
         </Link>
+
+        <DangerZoneSection />
       </main>
     </div>
+  );
+}
+
+function DangerZoneSection() {
+  const { deleteAccount } = useAuth();
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const act = useAction();
+
+  async function handleDelete() {
+    const ok = await act.run(async () => {
+      await deleteAccount();
+      return true;
+    });
+    if (ok) router.push("/");
+  }
+
+  return (
+    <Panel title="Опасная зона" desc="Необратимые действия с аккаунтом">
+      {!expanded ? (
+        <Btn tone="danger" onClick={() => setExpanded(true)}>
+          Удалить аккаунт
+        </Btn>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-slate">
+            Аккаунт будет удалён безвозвратно: ФИО стирается, псевдоним и имя
+            обнуляются, войти повторно через Госуслуги этим же гражданином
+            будет нельзя. Публичный трек-рекорд прогнозов останется, но
+            обезличенным. Если есть активная подписка — автопродление
+            отменится автоматически (уже списанные средства не возвращаются).
+          </p>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-[color:var(--color-danger)]"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+            />
+            <span>Я понимаю, что это необратимо, и хочу удалить аккаунт</span>
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <Btn
+              tone="danger"
+              disabled={!confirmed}
+              loading={act.loading}
+              onClick={handleDelete}
+            >
+              Удалить аккаунт навсегда
+            </Btn>
+            <Btn
+              tone="ghost"
+              onClick={() => {
+                setExpanded(false);
+                setConfirmed(false);
+                act.setError(null);
+              }}
+            >
+              Отмена
+            </Btn>
+          </div>
+          <Notice error={act.error} ok={act.okMsg} />
+        </div>
+      )}
+    </Panel>
   );
 }
 
