@@ -13,6 +13,12 @@ docker compose --profile full up --build
 Поднимает postgres, redis, backend (мигрирует и стартует), worker, mock-esia,
 frontend. Открыть http://localhost:3000.
 
+> Postgres здесь же заводит «из коробки» непривилегированную роль приложения
+> `orakul_app` (init-скрипт `dev/postgres-initdb/`, второй контур защиты
+> append-only-журналов — см. `backend/README.md`). `DATABASE_URL` приложения
+> локально остаётся под владельцем (`orakul`) — проще для дева; роль нужна
+> только для ручной/e2e-проверки REVOKE.
+
 > В этой песочнице Docker Hub и PyPI недоступны (DNS/handshake блокируются),
 > поэтому образы приложения здесь не собрать. Артефакты (Dockerfile'ы, compose)
 > корректны и собираются там, где сеть открыта. Локально используйте вариант B.

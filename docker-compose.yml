@@ -42,10 +42,20 @@ services:
       POSTGRES_USER: orakul
       POSTGRES_PASSWORD: orakul
       POSTGRES_DB: orakul
+      # T9: непривилегированная роль приложения orakul_app создаётся init-
+      # скриптом ниже «из коробки» (только при первой инициализации пустого
+      # тома). DATABASE_URL приложения по-прежнему владелец — локально
+      # удобство важнее второго контура защиты (см. backend/README.md).
+      APP_DB_ROLE: orakul_app
+      APP_DB_PASSWORD: orakul_app_dev_password
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Каноничный bootstrap-скрипт роли — источник истины backend/scripts
+      # (тот же файл использует Helm-чарт); init-скрипт ниже его вызывает.
+      - ../backend/scripts/create_app_role.sql:/opt/orakul/create_app_role.sql:ro
+      - ./dev/postgres-initdb/010-create-app-role.sh:/docker-entrypoint-initdb.d/010-create-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U orakul -d orakul"]
       interval: 3s
