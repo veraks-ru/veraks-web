@@ -123,11 +123,15 @@ function Lifecycle({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
 }
 
 function ResolutionPanel({ ev, res, onDone }: { ev: ApiEvent; res: ApiResolution | null; onDone: () => void }) {
+  const { me } = useAuth();
   const [outcome, setOutcome] = useState<"yes" | "no">("yes");
   const [src, setSrc] = useState("https://example.org/доказательство");
   const [notes, setNotes] = useState("");
   const act = useAction();
-  const canResolve = ["closed", "resolving", "resolved", "disputed"].includes(ev.status);
+  // Фиксация исхода — только арбитр/админ (PRD §3.4): у редактора, ведущего
+  // событие, конфликт интересов при подведении его же итога.
+  const allowed = me?.role === "arbiter" || me?.role === "admin";
+  const canResolve = allowed && ["closed", "resolving", "resolved", "disputed"].includes(ev.status);
 
   async function submit() {
     if (!src.trim()) { act.setError("Укажите ссылку-доказательство"); return; }
@@ -145,7 +149,9 @@ function ResolutionPanel({ ev, res, onDone }: { ev: ApiEvent; res: ApiResolution
           Текущий исход: <b>{res.outcome ? "ДА" : "НЕТ"}</b> ({res.status}) · {res.source_reference}
         </p>
       )}
-      {!canResolve ? (
+      {!allowed ? (
+        <p className="text-sm text-slate">Фиксация исхода доступна только арбитру или администратору.</p>
+      ) : !canResolve ? (
         <p className="text-sm text-slate">Разрешать можно после закрытия приёма (статус closed/resolving).</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -302,10 +308,13 @@ function DisputesPanel({ disputes, onDone }: { disputes: ApiDispute[]; onDone: (
 }
 
 function DisputeRow({ d, onDone }: { d: ApiDispute; onDone: () => void }) {
+  const { me } = useAuth();
   const [newOutcome, setNewOutcome] = useState<"yes" | "no">("yes");
   const [notes, setNotes] = useState("");
   const act = useAction();
-  const pending = d.status === "open" || d.status === "under_review";
+  // Решение по спору — только арбитр/админ; у редактора кнопки скрыты.
+  const allowed = me?.role === "arbiter" || me?.role === "admin";
+  const pending = allowed && (d.status === "open" || d.status === "under_review");
 
   const decide = async (accept: boolean) => {
     const r = await act.run(
@@ -338,12 +347,23 @@ function DisputeRow({ d, onDone }: { d: ApiDispute; onDone: () => void }) {
   );
 }
 
+/** Условия конкурса опубликованного события неизменны (ст. 1058 ГК РФ). */
+const CONDITIONS_LOCKED_HINT =
+  "Условия опубликованного события изменять нельзя (ст. 1058 ГК РФ)";
+
+/** Стиль read-only отображения заблокированного поля (вместо ``inputCls``). */
+const lockedFieldCls =
+  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-slate";
+
 function EditPanel({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(ev.title);
   const [src, setSrc] = useState(ev.resolution_source);
   const [crit, setCrit] = useState(ev.resolution_criteria);
   const act = useAction();
+  // От «open» и далее формулировка/источник/критерий зафиксированы — правка
+  // условий публичного конкурса после его начала запрещена.
+  const locked = ev.status !== "draft";
 
   async function submit() {
     const r = await act.run(
@@ -357,10 +377,31 @@ function EditPanel({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
     <Panel title="Редактировать" right={<Btn tone="ghost" onClick={() => setOpen((v) => !v)}>{open ? "Свернуть" : "Развернуть"}</Btn>}>
       {open && (
         <div className="grid gap-4">
-          <Field label="Заголовок"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-          <Field label="Источник истины"><input className={inputCls} value={src} onChange={(e) => setSrc(e.target.value)} /></Field>
-          <Field label="Критерии"><input className={inputCls} value={crit} onChange={(e) => setCrit(e.target.value)} /></Field>
-          <div><Btn tone="primary" loading={act.loading} onClick={submit}>Сохранить</Btn><Notice error={act.error} ok={act.okMsg} /></div>
+          {locked && <p className="text-sm text-slate">{CONDITIONS_LOCKED_HINT}</p>}
+          <Field label="Заголовок">
+            {locked ? (
+              <p className={lockedFieldCls}>{title}</p>
+            ) : (
+              <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Источник истины">
+            {locked ? (
+              <p className={lockedFieldCls}>{src}</p>
+            ) : (
+              <input className={inputCls} value={src} onChange={(e) => setSrc(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Критерии">
+            {locked ? (
+              <p className={lockedFieldCls}>{crit}</p>
+            ) : (
+              <input className={inputCls} value={crit} onChange={(e) => setCrit(e.target.value)} />
+            )}
+          </Field>
+          {!locked && (
+            <div><Btn tone="primary" loading={act.loading} onClick={submit}>Сохранить</Btn><Notice error={act.error} ok={act.okMsg} /></div>
+          )}
         </div>
       )}
     </Panel>
