@@ -27,8 +27,18 @@ function ensureLoaded(): void {
     });
 }
 
-/** Карта slug → title из справочника категорий. Пока не загружен — пустая. */
-export function useCategoryMap(): Map<string, string> {
+/**
+ * Сбрасывает кэш и перезапрашивает справочник (после создания категории в
+ * админке) — иначе подписчики кэша не увидят новую категорию без перезагрузки.
+ */
+export function invalidateCategoryCache(): void {
+  cache = null;
+  inflight = null;
+  ensureLoaded();
+}
+
+/** Общий хук: подписывается на модульный кэш справочника категорий. */
+function useCategoriesCache(): ApiCategory[] {
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -41,7 +51,18 @@ export function useCategoryMap(): Map<string, string> {
     };
   }, []);
 
-  return new Map((cache ?? []).map((c) => [c.slug, c.title]));
+  return cache ?? [];
+}
+
+/** Полный список категорий (включая ``is_restricted``) из общего кэша. */
+export function useCategoryList(): ApiCategory[] {
+  return useCategoriesCache();
+}
+
+/** Карта slug → title из справочника категорий. Пока не загружен — пустая. */
+export function useCategoryMap(): Map<string, string> {
+  const cats = useCategoriesCache();
+  return new Map(cats.map((c) => [c.slug, c.title]));
 }
 
 /** Название категории по slug с фолбэком на сам slug, пока справочник грузится. */

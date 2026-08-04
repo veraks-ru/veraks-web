@@ -22,6 +22,8 @@ export interface ApiCategory {
   title: string;
   description: string;
   parent_id: string | null;
+  /** Запрещённая тематика (PRD §7.5) — события в такой категории не создаются. */
+  is_restricted: boolean;
 }
 
 export interface ApiEvent {

@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
-import { listCategories } from "@/lib/api/endpoints";
+import { RestrictedTopicsNotice } from "@/components/events/RestrictedTopicsNotice";
+import { useCategoryList } from "@/lib/api/useCategories";
 import { proposeEvent } from "@/lib/api/endpoints";
 import type { EventInput } from "@/lib/api/admin";
-import type { ApiCategory } from "@/lib/api/dto";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toLocal = (d: Date) =>
@@ -17,7 +17,7 @@ const DAY = 86_400_000;
 
 export default function ProposeEventPage() {
   const { me, subscribed, loading } = useAuth();
-  const [cats, setCats] = useState<ApiCategory[]>([]);
+  const cats = useCategoryList();
   const [done, setDone] = useState(false);
   const now = new Date();
   const [f, setF] = useState<Omit<EventInput, "season_id">>({
@@ -33,13 +33,14 @@ export default function ProposeEventPage() {
   const act = useAction();
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
-  useEffect(() => {
-    listCategories().then((c) => setCats(c ?? []));
-  }, []);
-
   async function submit() {
     if (!f.title.trim() || !f.category_id || !f.resolution_source.trim()) {
       act.setError("Заполните вопрос, категорию и источник истины");
+      return;
+    }
+    const chosen = cats.find((c) => c.id === f.category_id);
+    if (chosen?.is_restricted) {
+      act.setError("Эта категория запрещена правилами платформы — выберите другую");
       return;
     }
     const body: EventInput = {
@@ -112,10 +113,13 @@ export default function ProposeEventPage() {
                   <select className={inputCls} value={f.category_id} onChange={(e) => set("category_id", e.target.value)}>
                     <option value="">— выберите —</option>
                     {cats.map((c) => (
-                      <option key={c.id} value={c.id}>{c.title}</option>
+                      <option key={c.id} value={c.id} disabled={c.is_restricted}>
+                        {c.is_restricted ? `${c.title} — тематика ограничена правилами` : c.title}
+                      </option>
                     ))}
                   </select>
                 </Field>
+                <RestrictedTopicsNotice />
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field label="Открытие приёма">
                     <input type="datetime-local" className={inputCls} value={f.opens_at} onChange={(e) => set("opens_at", e.target.value)} />

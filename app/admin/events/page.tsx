@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
-import { listCategories, listEvents, listSeasons } from "@/lib/api/endpoints";
+import { RestrictedTopicsNotice } from "@/components/events/RestrictedTopicsNotice";
+import { listEvents, listSeasons } from "@/lib/api/endpoints";
+import { invalidateCategoryCache, useCategoryList } from "@/lib/api/useCategories";
 import {
   createEvent,
   createCategory,
@@ -34,7 +36,7 @@ const dayMs = 86_400_000;
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<ApiEvent[] | null>(null);
   const [proposed, setProposed] = useState<ApiEvent[]>([]);
-  const [cats, setCats] = useState<ApiCategory[]>([]);
+  const cats = useCategoryList();
   const [seasons, setSeasons] = useState<ApiSeason[]>([]);
   const [reload, setReload] = useState(0);
 
@@ -42,12 +44,10 @@ export default function AdminEventsPage() {
     Promise.all([
       listEvents({ limit: 200 }),
       listEvents({ status: "proposed", limit: 200 }),
-      listCategories(),
       listSeasons(),
-    ]).then(([e, p, c, s]) => {
+    ]).then(([e, p, s]) => {
       setEvents(e ?? []);
       setProposed(p ?? []);
-      setCats(c ?? []);
       setSeasons(s?.items ?? []);
     });
   }, [reload]);
@@ -226,6 +226,10 @@ function CreateEventForm({
       act.setError("Заполните заголовок и категорию");
       return;
     }
+    if (cats.find((c) => c.id === f.category_id)?.is_restricted) {
+      act.setError("Эта категория запрещена правилами платформы — выберите другую");
+      return;
+    }
     const body: EventInput = {
       ...f,
       opens_at: new Date(f.opens_at).toISOString(),
@@ -271,10 +275,15 @@ function CreateEventForm({
             <select className={inputCls} value={f.category_id} onChange={(e) => set("category_id", e.target.value)}>
               <option value="">— выберите —</option>
               {cats.map((c) => (
-                <option key={c.id} value={c.id}>{c.title}</option>
+                <option key={c.id} value={c.id} disabled={c.is_restricted}>
+                  {c.is_restricted ? `${c.title} — тематика ограничена правилами` : c.title}
+                </option>
               ))}
             </select>
           </Field>
+          <div className="sm:col-span-2">
+            <RestrictedTopicsNotice />
+          </div>
           <Field label="Сезон (опционально)">
             <select className={inputCls} value={f.season_id ?? ""} onChange={(e) => set("season_id", e.target.value || null)}>
               <option value="">— без сезона —</option>
@@ -325,6 +334,7 @@ function CreateCategoryForm({ onCreated }: { onCreated: () => void }) {
     if (r) {
       setSlug("");
       setTitle("");
+      invalidateCategoryCache();
       onCreated();
     }
   }
