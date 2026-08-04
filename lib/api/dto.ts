@@ -11,7 +11,10 @@ export type ApiEventStatus =
   | "resolving"
   | "resolved"
   | "disputed"
-  | "cancelled";
+  /** Отменено ДО подведения исхода (прогнозы не оценивались). */
+  | "cancelled"
+  /** Аннулировано ПОСЛЕ исхода — событие исключено из рейтингов (ст. 1058 ГК РФ). */
+  | "annulled";
 
 export interface ApiCategory {
   id: string;

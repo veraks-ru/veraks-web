@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   resolved: "Разрешено",
   disputed: "Оспорено",
   cancelled: "Отменено",
+  annulled: "Аннулировано",
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");

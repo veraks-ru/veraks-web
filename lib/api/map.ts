@@ -10,8 +10,14 @@ import type {
   ApiPredictionSummary,
 } from "./dto";
 
+/**
+ * Статус бэкенда → статус вью-модели.
+ *
+ * `cancelled` (отмена до исхода) и `annulled` (аннулирование после исхода)
+ * различаются: у первого прогнозы вообще не оценивались, у второго событие
+ * вычеркнуто из рейтингов уже после фиксации исхода.
+ */
 export function mapStatus(s: ApiEventStatus): EventStatus {
-  if (s === "cancelled") return "annulled";
   // draft/proposed публично не показываются; на всякий случай → closed.
   if (s === "draft" || s === "proposed") return "closed";
   return s;

@@ -7,6 +7,9 @@ export type EventStatus =
   | "resolving"
   | "resolved"
   | "disputed"
+  /** Отменено до подведения исхода: прогнозы не оценивались. */
+  | "cancelled"
+  /** Аннулировано после исхода: прогнозы не участвуют в рейтингах. */
   | "annulled";
 
 export interface Category {

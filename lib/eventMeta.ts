@@ -25,6 +25,8 @@ export function eventStatusLabel(ev: ApiEvent): string {
     case "disputed":
       return "Исход оспаривается";
     case "cancelled":
+      return "Событие отменено";
+    case "annulled":
       return "Событие аннулировано";
     default:
       return "Событие";

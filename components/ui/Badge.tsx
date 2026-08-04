@@ -62,6 +62,9 @@ export function StatusBadge({
   } else if (status === "annulled") {
     tone = "neutral";
     label = "Аннулировано";
+  } else if (status === "cancelled") {
+    tone = "neutral";
+    label = "Отменено";
   }
 
   return (

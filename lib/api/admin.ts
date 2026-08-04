@@ -43,6 +43,13 @@ export const closeEvent = (id: string) =>
 export const cancelEvent = (id: string) =>
   apiFetch<ApiEvent>(`/events/${id}/cancel`, { method: "POST" });
 
+/**
+ * Аннулирование события ПОСЛЕ фиксации исхода (arbiter/admin, ст. 1058 ГК РФ).
+ * Причина обязательна: она уходит в неизменяемый аудит, публично не видна.
+ */
+export const annulEvent = (id: string, reason: string) =>
+  apiFetch<ApiEvent>(`/events/${id}/annul`, { method: "POST", body: { reason } });
+
 /* ── Модерация пользовательских предложений (editor/admin) ── */
 
 export const approveEvent = (id: string) =>

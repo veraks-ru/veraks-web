@@ -5,10 +5,11 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
+import { useAuth } from "@/components/app/AuthProvider";
 import { fmtDate } from "@/lib/format";
 import { getEvent, getResolution } from "@/lib/api/endpoints";
 import {
-  publishEvent, closeEvent, cancelEvent, updateEvent,
+  publishEvent, closeEvent, cancelEvent, annulEvent, updateEvent,
   fixResolution, listDisputes, decideDispute,
   scoreEvent, recomputeRatings,
 } from "@/lib/api/admin";
@@ -17,8 +18,12 @@ import type { ApiDispute, ApiEvent, ApiResolution } from "@/lib/api/dto";
 const STATUS_LABEL: Record<string, string> = {
   proposed: "На модерации",
   draft: "Черновик", open: "Открыто", closed: "Приём закрыт",
-  resolving: "Разрешается", resolved: "Разрешено", disputed: "Оспорено", cancelled: "Отменено",
+  resolving: "Разрешается", resolved: "Разрешено", disputed: "Оспорено",
+  cancelled: "Отменено", annulled: "Аннулировано",
 };
+
+/** Статусы, из которых событие можно аннулировать (исход уже зафиксирован). */
+const ANNULLABLE = ["resolved", "disputed"];
 
 export default function ManageEventPage() {
   const { slug: id } = useParams<{ slug: string }>();
@@ -74,6 +79,7 @@ export default function ManageEventPage() {
 
       <Lifecycle ev={ev} onDone={refresh} />
       <ResolutionPanel ev={ev} res={res} onDone={refresh} />
+      <AnnulPanel ev={ev} onDone={refresh} />
       <ScoringPanel ev={ev} />
       <DisputesPanel disputes={disputes} onDone={refresh} />
       <EditPanel ev={ev} onDone={refresh} />
@@ -101,7 +107,7 @@ function Lifecycle({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
         <Btn disabled={ev.status !== "open"} loading={busy === "close"} onClick={() => run("close", () => closeEvent(ev.id), "Приём закрыт")}>
           Закрыть приём
         </Btn>
-        <Btn tone="danger" disabled={["resolved", "cancelled"].includes(ev.status)} loading={busy === "cancel"} onClick={() => run("cancel", () => cancelEvent(ev.id), "Событие отменено")}>
+        <Btn tone="danger" disabled={["resolved", "disputed", "cancelled", "annulled"].includes(ev.status)} loading={busy === "cancel"} onClick={() => run("cancel", () => cancelEvent(ev.id), "Событие отменено")}>
           Отменить
         </Btn>
       </div>
@@ -155,6 +161,99 @@ function ResolutionPanel({ ev, res, onDone }: { ev: ApiEvent; res: ApiResolution
           </div>
         </div>
       )}
+    </Panel>
+  );
+}
+
+/**
+ * Аннулирование события после подведения исхода (ст. 1058 ГК РФ, PRD §7.5).
+ *
+ * Не путать с «Отменить» в жизненном цикле: там событие снимается ДО исхода.
+ * Здесь исход уже зафиксирован, и аннулирование вычёркивает событие из
+ * рейтингов всех участников — поэтому доступно только арбитру и админу,
+ * требует причины (уходит в аудит) и явного подтверждения.
+ */
+function AnnulPanel({ ev, onDone }: { ev: ApiEvent; onDone: () => void }) {
+  const { me } = useAuth();
+  const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const act = useAction();
+
+  const allowed = me?.role === "arbiter" || me?.role === "admin";
+  const annullable = ANNULLABLE.includes(ev.status);
+
+  async function submit() {
+    const text = reason.trim();
+    if (!text) {
+      act.setError("Причина обязательна — она уходит в неизменяемый аудит");
+      return;
+    }
+    const r = await act.run(() => annulEvent(ev.id, text), "Событие аннулировано");
+    if (r) {
+      setConfirming(false);
+      setReason("");
+      onDone();
+    }
+  }
+
+  return (
+    <Panel
+      title="Аннулирование"
+      desc="Событие исключается из всех рейтингов и калибровки"
+    >
+      {ev.status === "annulled" ? (
+        <p className="text-sm text-slate">
+          Событие аннулировано. Прогнозы по нему не участвуют в рейтингах;
+          причина зафиксирована в аудите.
+        </p>
+      ) : !allowed ? (
+        <p className="text-sm text-slate">
+          Аннулировать событие вправе только арбитр или администратор.
+        </p>
+      ) : !annullable ? (
+        <p className="text-sm text-slate">
+          Доступно только после фиксации исхода (статус resolved/disputed). Событие
+          без исхода снимается кнопкой «Отменить» в жизненном цикле.
+        </p>
+      ) : (
+        <div className="grid gap-4">
+          <Field
+            label="Причина"
+            hint="Двусмысленная формулировка, ошибка источника, неразрешимый спор. Публично не показывается."
+          >
+            <input
+              className={inputCls}
+              value={reason}
+              placeholder="Например: источник опроверг собственную публикацию"
+              onChange={(e) => {
+                setReason(e.target.value);
+                setConfirming(false);
+              }}
+            />
+          </Field>
+          {confirming ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-slate">
+                Аннулировать событие? Прогнозы всех участников по нему перестанут
+                учитываться, действие необратимо.
+              </p>
+              <Btn tone="danger" loading={act.loading} onClick={submit}>
+                Да, аннулировать
+              </Btn>
+              <Btn tone="ghost" onClick={() => setConfirming(false)}>
+                Отмена
+              </Btn>
+            </div>
+          ) : (
+            <div>
+              <Btn tone="danger" onClick={() => setConfirming(true)}>
+                Аннулировать
+              </Btn>
+            </div>
+          )}
+        </div>
+      )}
+      <Notice error={act.error} ok={act.okMsg} />
     </Panel>
   );
 }
