@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
-import { Spinner } from "@/components/ui/Spinner";
+import { LoadingState, EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import {
@@ -32,11 +32,14 @@ const PAYOUT_STATUS: Record<string, string> = {
 export default function SponsorPage() {
   const { me, loading: authLoading } = useAuth();
   const [funds, setFunds] = useState<ApiPrizeFund[] | null>(null);
+  const [error, setError] = useState(false);
 
-  const load = () =>
-    getMySponsorFunds()
+  const load = () => {
+    setError(false);
+    return getMySponsorFunds()
       .then((f) => setFunds(f ?? []))
-      .catch(() => setFunds([]));
+      .catch(() => setError(true));
+  };
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -57,9 +60,7 @@ export default function SponsorPage() {
         </p>
 
         {authLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-7 text-[color:var(--color-signal-deep)]" />
-          </div>
+          <LoadingState />
         ) : !me ? (
           <p className="mt-8 text-sm text-slate">
             <Link href="/join" className="font-600 text-[color:var(--color-signal-deep)]">
@@ -72,10 +73,16 @@ export default function SponsorPage() {
             <AnnounceForm onDone={load} />
             <section className="mt-8">
               <h2 className="mb-3 text-sm font-600">Мои фонды</h2>
-              {funds === null ? (
-                <p className="text-sm text-slate">Загрузка…</p>
+              {error ? (
+                <ErrorState onRetry={load} className="py-10" />
+              ) : funds === null ? (
+                <LoadingState className="py-10" />
               ) : funds.length === 0 ? (
-                <p className="text-sm text-slate">Пока нет фондов — заведите первый выше.</p>
+                <EmptyState
+                  title="Пока нет фондов"
+                  hint="Заведите первый выше."
+                  className="py-10"
+                />
               ) : (
                 <ul className="space-y-3">
                   {funds.map((f) => (
@@ -153,12 +160,16 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
   const [open, setOpen] = useState(false);
   const act = useAction();
 
+  const loadDetail = () => {
+    setDetail(undefined);
+    getSponsorFund(fund.id)
+      .then((d) => setDetail(d ?? null))
+      .catch(() => setDetail(null));
+  };
+
   useEffect(() => {
-    if (open && detail === undefined) {
-      getSponsorFund(fund.id)
-        .then((d) => setDetail(d ?? null))
-        .catch(() => setDetail(null));
-    }
+    if (open && detail === undefined) loadDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, detail, fund.id]);
 
   return (
@@ -212,9 +223,14 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
       {open && (
         <div className="mt-4 border-t border-line/60 pt-3">
           {detail === undefined ? (
-            <p className="text-sm text-slate">Загрузка…</p>
+            <LoadingState className="py-6" />
           ) : detail === null ? (
-            <p className="text-sm text-slate">Не удалось загрузить выплаты.</p>
+            <ErrorState
+              title="Не удалось загрузить выплаты"
+              onRetry={loadDetail}
+              className="py-6"
+              bare
+            />
           ) : detail.payouts.length === 0 ? (
             <p className="text-sm text-slate">Выплат из фонда пока не было.</p>
           ) : (

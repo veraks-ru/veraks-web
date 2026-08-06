@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
-import { Spinner } from "@/components/ui/Spinner";
+import { LoadingState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { getFeed } from "@/lib/api/endpoints";
 import type { ApiFeedItem } from "@/lib/api/dto";
@@ -12,6 +12,15 @@ import { fmtBrier, fmtDate } from "@/lib/format";
 export default function FeedPage() {
   const { me, loading: authLoading } = useAuth();
   const [items, setItems] = useState<ApiFeedItem[] | null>(null);
+  const [error, setError] = useState(false);
+
+  const load = () => {
+    setError(false);
+    setItems(null);
+    getFeed()
+      .then((f) => setItems(f ?? []))
+      .catch(() => setError(true));
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -19,9 +28,7 @@ export default function FeedPage() {
       setItems([]);
       return;
     }
-    getFeed()
-      .then((f) => setItems(f ?? []))
-      .catch(() => setItems([]));
+    load();
   }, [me, authLoading]);
 
   return (
@@ -33,10 +40,8 @@ export default function FeedPage() {
           Активность предсказателей, которых вы читаете.
         </p>
 
-        {authLoading || items === null ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-7 text-[color:var(--color-signal-deep)]" />
-          </div>
+        {authLoading ? (
+          <LoadingState />
         ) : !me ? (
           <p className="mt-8 text-sm text-slate">
             <Link href="/join" className="font-600 text-[color:var(--color-signal-deep)]">
@@ -44,8 +49,12 @@ export default function FeedPage() {
             </Link>
             , чтобы видеть персональную ленту.
           </p>
+        ) : error ? (
+          <ErrorState onRetry={load} className="mt-8 py-14" />
+        ) : items === null ? (
+          <LoadingState />
         ) : items.length === 0 ? (
-          <div className="mt-8 rounded-[var(--radius-card)] border border-line bg-surface p-6 text-sm text-slate">
+          <div className="mt-8 rounded-[var(--radius-card)] border border-dashed border-line bg-surface p-6 text-sm text-slate">
             Пока пусто. Найдите сильных предсказателей в{" "}
             <Link href="/leaderboards" className="font-600 text-[color:var(--color-signal-deep)]">
               лидербордах

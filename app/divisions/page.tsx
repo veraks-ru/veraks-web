@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/app/TopNav";
-import { Spinner } from "@/components/ui/Spinner";
+import { LoadingState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { listSeasons, getDivisionStandings } from "@/lib/api/endpoints";
 import type { ApiDivisionStandings, ApiSeason } from "@/lib/api/dto";
@@ -13,27 +13,39 @@ const LEVELS = [1, 2, 3];
 export default function DivisionsPage() {
   const { me } = useAuth();
   const [season, setSeason] = useState<ApiSeason | null | undefined>(undefined);
+  const [seasonErr, setSeasonErr] = useState(false);
   const [level, setLevel] = useState(1);
   // undefined — загрузка, null — пусто/404, стандинги — данные.
   const [standings, setStandings] = useState<ApiDivisionStandings | null | undefined>(undefined);
   const [stErr, setStErr] = useState(false);
 
-  useEffect(() => {
+  const loadSeason = () => {
+    setSeasonErr(false);
+    setSeason(undefined);
     listSeasons()
       .then((s) => {
         const items = s?.items ?? [];
         setSeason(items.find((x) => x.status === "active") ?? items[0] ?? null);
       })
-      .catch(() => setSeason(null));
-  }, []);
+      .catch(() => setSeasonErr(true));
+  };
 
   useEffect(() => {
+    loadSeason();
+  }, []);
+
+  const loadStandings = () => {
     if (!season) return;
     setStandings(undefined);
     setStErr(false);
     getDivisionStandings(season.id, level)
       .then((d) => setStandings(d ?? null))
       .catch(() => setStErr(true));
+  };
+
+  useEffect(() => {
+    loadStandings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [season, level]);
 
   return (
@@ -46,10 +58,10 @@ export default function DivisionsPage() {
           поднимаются, слабейшие опускаются между сезонами.
         </p>
 
-        {season === undefined ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-7 text-[color:var(--color-signal-deep)]" />
-          </div>
+        {seasonErr ? (
+          <ErrorState onRetry={loadSeason} />
+        ) : season === undefined ? (
+          <LoadingState />
         ) : season === null ? (
           <p className="mt-8 text-sm text-slate">Активного сезона пока нет.</p>
         ) : (
@@ -72,9 +84,14 @@ export default function DivisionsPage() {
 
             <section className="mt-5 rounded-[var(--radius-card)] border border-line bg-surface p-5">
               {stErr ? (
-                <p className="py-4 text-sm text-slate">Не удалось загрузить дивизион.</p>
+                <ErrorState
+                  title="Не удалось загрузить дивизион"
+                  onRetry={loadStandings}
+                  className="py-4"
+                  bare
+                />
               ) : standings === undefined ? (
-                <p className="py-4 text-sm text-slate">Загрузка…</p>
+                <LoadingState className="py-4" />
               ) : standings === null ? (
                 <p className="py-4 text-sm text-slate">В этом дивизионе пока нет участников.</p>
               ) : (

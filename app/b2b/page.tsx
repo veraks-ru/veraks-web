@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
-import { Spinner } from "@/components/ui/Spinner";
+import { LoadingState, EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { createApiKey, getMyApiKeys, revokeApiKey, getApiKeyUsage } from "@/lib/api/endpoints";
@@ -13,12 +13,15 @@ import { fmtDate } from "@/lib/format";
 export default function B2bPage() {
   const { me, loading: authLoading } = useAuth();
   const [keys, setKeys] = useState<ApiApiKey[] | null>(null);
+  const [error, setError] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
 
-  const load = () =>
-    getMyApiKeys()
+  const load = () => {
+    setError(false);
+    return getMyApiKeys()
       .then((k) => setKeys(k ?? []))
-      .catch(() => setKeys([]));
+      .catch(() => setError(true));
+  };
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -39,9 +42,7 @@ export default function B2bPage() {
         </p>
 
         {authLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-7 text-[color:var(--color-signal-deep)]" />
-          </div>
+          <LoadingState />
         ) : !me ? (
           <p className="mt-8 text-sm text-slate">
             <Link href="/join" className="font-600 text-[color:var(--color-signal-deep)]">
@@ -56,10 +57,16 @@ export default function B2bPage() {
 
             <section className="mt-8">
               <h2 className="mb-3 text-sm font-600">Мои ключи</h2>
-              {keys === null ? (
-                <p className="text-sm text-slate">Загрузка…</p>
+              {error ? (
+                <ErrorState onRetry={load} className="py-10" />
+              ) : keys === null ? (
+                <LoadingState className="py-10" />
               ) : keys.length === 0 ? (
-                <p className="text-sm text-slate">Пока нет ключей — создайте первый выше.</p>
+                <EmptyState
+                  title="Пока нет ключей"
+                  hint="Создайте первый выше."
+                  className="py-10"
+                />
               ) : (
                 <ul className="space-y-3">
                   {keys.map((k) => (

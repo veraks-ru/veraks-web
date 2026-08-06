@@ -98,8 +98,17 @@ export default function OnboardingPage() {
         display_name: trimmedDisplayName ? trimmedDisplayName : undefined,
         consents: missing.map((c) => ({ document: c.document, version: c.version })),
       });
-      if (updated) await refresh();
-      router.replace("/events");
+      if (!updated) {
+        setFormError("Не удалось сохранить, попробуйте ещё раз");
+        return;
+      }
+      await refresh();
+      // Решаем о редиректе по актуальному состоянию из ответа, а не по
+      // предположению, что успешная отправка формы сразу закрывает онбординг
+      // (могут остаться другие незавершённые требования).
+      if (!updated.needs_onboarding) {
+        router.replace("/events");
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setUsernameError("Такой псевдоним уже занят — выберите другой");

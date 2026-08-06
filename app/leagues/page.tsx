@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
-import { Spinner } from "@/components/ui/Spinner";
+import { LoadingState, EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import {
@@ -19,12 +19,15 @@ import { StandingsTable } from "@/components/leagues/StandingsTable";
 export default function LeaguesPage() {
   const { me, loading: authLoading } = useAuth();
   const [leagues, setLeagues] = useState<ApiLeague[] | null>(null);
+  const [error, setError] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const load = () =>
-    getMyLeagues()
+  const load = () => {
+    setError(false);
+    return getMyLeagues()
       .then((l) => setLeagues(l ?? []))
-      .catch(() => setLeagues([]));
+      .catch(() => setError(true));
+  };
   useEffect(() => {
     if (authLoading) return;
     if (!me) {
@@ -44,9 +47,7 @@ export default function LeaguesPage() {
         </p>
 
         {authLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-7 text-[color:var(--color-signal-deep)]" />
-          </div>
+          <LoadingState />
         ) : !me ? (
           <p className="mt-8 text-sm text-slate">
             <Link href="/join" className="font-600 text-[color:var(--color-signal-deep)]">
@@ -63,12 +64,16 @@ export default function LeaguesPage() {
 
             <section className="mt-8">
               <h2 className="mb-3 text-sm font-600">Мои лиги</h2>
-              {leagues === null ? (
-                <p className="text-sm text-slate">Загрузка…</p>
+              {error ? (
+                <ErrorState onRetry={load} className="py-10" />
+              ) : leagues === null ? (
+                <LoadingState className="py-10" />
               ) : leagues.length === 0 ? (
-                <p className="text-sm text-slate">
-                  Пока нет лиг — создайте свою или вступите по коду.
-                </p>
+                <EmptyState
+                  title="Пока нет лиг"
+                  hint="Создайте свою или вступите по коду."
+                  className="py-10"
+                />
               ) : (
                 <ul className="space-y-3">
                   {leagues.map((l) => (
@@ -172,15 +177,21 @@ function LeagueCard({
   onLeft: () => void;
 }) {
   const [standings, setStandings] = useState<ApiLeagueStandings | null | undefined>(undefined);
+  const [stErr, setStErr] = useState(false);
   const act = useAction();
 
+  const loadStandings = () => {
+    setStErr(false);
+    setStandings(undefined);
+    getLeagueStandings(league.id)
+      .then((s) => setStandings(s ?? null))
+      .catch(() => setStErr(true));
+  };
+
   useEffect(() => {
-    if (open && standings === undefined) {
-      getLeagueStandings(league.id)
-        .then((s) => setStandings(s ?? null))
-        .catch(() => setStandings(null));
-    }
-  }, [open, standings, league.id]);
+    if (open && standings === undefined && !stErr) loadStandings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, standings, stErr, league.id]);
 
   return (
     <li className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
@@ -210,8 +221,10 @@ function LeagueCard({
       </div>
       {open && (
         <div className="mt-4">
-          {standings === undefined ? (
-            <p className="text-sm text-slate">Загрузка…</p>
+          {stErr ? (
+            <ErrorState onRetry={loadStandings} className="py-6" bare />
+          ) : standings === undefined ? (
+            <LoadingState className="py-6" />
           ) : standings === null ? (
             <p className="text-sm text-slate">Лидерборд лиги недоступен.</p>
           ) : (
