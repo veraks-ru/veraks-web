@@ -39,9 +39,11 @@ app = FastAPI(title="Mock ЕСИА (dev only)")
 ISSUER = os.environ.get("MOCK_ESIA_ISSUER", "http://localhost:9000")
 _ID_TOKEN_TTL_SECONDS = 300
 
-# Ключ подписи id_token: генерируется при старте процесса (перезапуск мока —
-# новый ключ; бэкенд перечитает JWKS, увидев незнакомый kid).
-_KEY_ID = "mock-esia-key-1"
+# Ключ подписи id_token: генерируется при старте процесса. ``kid`` тоже
+# уникален на процесс — иначе после рестарта мока бэкенд считал бы ключ
+# «знакомым», не пошёл бы за новым JWKS и до истечения кэша (час) валил все
+# входы на проверке подписи.
+_KEY_ID = f"mock-esia-{secrets.token_hex(4)}"
 _PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 # СНИЛС с номером <= 001-001-998 не проверяются контрольной суммой (домен
