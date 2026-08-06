@@ -2,12 +2,14 @@
 // в компонентах). Маршруты используют id события в роли «slug».
 
 import { GRADES, type ConfidenceGrade } from "@/lib/confidence";
-import type { EventStatus, PredictionEvent } from "@/lib/types";
+import type { CategoryStat, EventStatus, PredictionEvent, ScopeRatingStat } from "@/lib/types";
 import type {
   ApiEvent,
   ApiEventStatus,
   ApiPrediction,
   ApiPredictionSummary,
+  ApiProfileCategoryRating,
+  ApiProfileScopeRating,
 } from "./dto";
 
 /**
@@ -72,4 +74,25 @@ export function myGradeMap(preds: ApiPrediction[] | null): Map<string, Confidenc
   const m = new Map<string, ConfidenceGrade>();
   for (const p of preds ?? []) m.set(p.event_id, p.confidence_grade);
   return m;
+}
+
+/** Готовый агрегат области сводки профиля (global/сезон) → вью-модель. */
+export function toScopeRatingStat(r: ApiProfileScopeRating): ScopeRatingStat {
+  return {
+    rank: r.rank,
+    skillScore: Number(r.skill_score),
+    meanBrier: Number(r.mean_brier),
+    nResolved: r.n_resolved,
+  };
+}
+
+/** Срез сводки профиля по категории → вью-модель («По категориям» на странице). */
+export function toCategoryStat(item: ApiProfileCategoryRating): CategoryStat {
+  return {
+    categorySlug: item.slug,
+    categoryTitle: item.title,
+    rank: item.rank,
+    meanBrier: Number(item.mean_brier),
+    nResolved: item.n_resolved,
+  };
 }

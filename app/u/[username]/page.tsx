@@ -12,15 +12,14 @@ import { OutcomeBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, gradeIndexForProbability, indexOfGrade } from "@/lib/confidence";
 import { ece as eceOf, calibrationVerdict } from "@/lib/calibration";
-import { useCategoryMap } from "@/lib/api/useCategories";
+import { toCategoryStat, toScopeRatingStat } from "@/lib/api/map";
 import { fmtBrier, fmtDate } from "@/lib/format";
-import type { CalibrationBucket, CategoryStat, HistoryItem } from "@/lib/types";
+import type { CalibrationBucket, CategoryStat, HistoryItem, ScopeRatingStat } from "@/lib/types";
 import {
   getCalibration,
-  getGlobalLeaderboard,
+  getProfileSummary,
   getPublicProfile,
   getUserPredictions,
-  listCategories,
   listEvents,
 } from "@/lib/api/endpoints";
 
@@ -32,7 +31,7 @@ interface ProfileVM {
   meanBrier: number | null;
   nResolved: number;
   globalRank: number | null;
-  totalRanked: number;
+  seasonRank: ScopeRatingStat | null;
   eceValue: number | null;
   calibration: CalibrationBucket[];
   decomposition: {
@@ -47,7 +46,6 @@ interface ProfileVM {
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const categoryMap = useCategoryMap();
   const [vm, setVm] = useState<ProfileVM | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "notfound" | "error">("loading");
 
@@ -61,17 +59,20 @@ export default function ProfilePage() {
           if (alive) setState("notfound");
           return;
         }
-        const [calib, preds, evs, cats, global] = await Promise.all([
+        // Сводка (global/категории/сезон) + калибровка + прогнозы — параллельно,
+        // без водопада промежуточных запросов (сводка отдаёт готовые агрегаты
+        // ratings, честный ранг без ограничения топ-200 лидерборда).
+        const [summary, calib, preds, evs] = await Promise.all([
+          getProfileSummary(username),
           getCalibration(username),
           getUserPredictions(username),
-          listEvents({ limit: 200 }),
-          listCategories(),
-          getGlobalLeaderboard(200),
+          listEvents({ limit: 100 }),
         ]);
 
-        const catSlug = new Map((cats ?? []).map((c) => [c.id, c.slug]));
+        // Заголовки/исходы событий — только для карточек «История» (сводка
+        // категорий/рангов уже готова в summary, событий по ней не нужно).
         const evMap = new Map(
-          (evs ?? []).map((e) => [e.id, { title: e.title, category: e.category_id, outcome: e.outcome }]),
+          (evs ?? []).map((e) => [e.id, { title: e.title, outcome: e.outcome }]),
         );
 
         const buckets: CalibrationBucket[] = (calib?.bins ?? []).map((b) => ({
@@ -82,21 +83,7 @@ export default function ProfilePage() {
 
         const scored = (preds ?? []).filter((p) => p.brier_score != null);
 
-        // По категориям — из собственных оценённых прогнозов.
-        const byCat = new Map<string, { sum: number; n: number }>();
-        for (const p of scored) {
-          const ev = evMap.get(p.event_id);
-          if (!ev) continue;
-          const slug = catSlug.get(ev.category) ?? "";
-          const acc = byCat.get(slug) ?? { sum: 0, n: 0 };
-          acc.sum += Number(p.brier_score);
-          acc.n += 1;
-          byCat.set(slug, acc);
-        }
-        const categories: CategoryStat[] = [...byCat.entries()]
-          .filter(([slug]) => slug)
-          .map(([slug, v]) => ({ categorySlug: slug, meanBrier: v.sum / v.n, nResolved: v.n }))
-          .sort((a, b) => a.meanBrier - b.meanBrier);
+        const categories: CategoryStat[] = (summary?.categories ?? []).map(toCategoryStat);
 
         const history: HistoryItem[] = [...scored]
           .sort((a, b) => +new Date(b.scored_at!) - +new Date(a.scored_at!))
@@ -106,7 +93,6 @@ export default function ProfilePage() {
             return {
               eventSlug: p.event_id,
               title: ev?.title ?? "Событие",
-              categorySlug: catSlug.get(ev?.category ?? "") ?? "",
               gradeIndex: indexOfGrade(p.confidence_grade),
               outcome: !!ev?.outcome,
               brier: Number(p.brier_score),
@@ -114,23 +100,25 @@ export default function ProfilePage() {
             };
           });
 
-        const myRow = (global?.entries ?? []).find((e) => e.user_id === calib?.user_id);
-        const meanBrier = myRow
-          ? Number(myRow.mean_brier)
-          : scored.length
-            ? scored.reduce((a, p) => a + Number(p.brier_score), 0) / scored.length
-            : null;
+        const globalStat = summary?.global ? toScopeRatingStat(summary.global) : null;
+        const seasonStat = summary?.season ? toScopeRatingStat(summary.season) : null;
 
         if (alive) {
           setVm({
             username: profile.username,
-            userId: calib?.user_id ?? myRow?.user_id ?? null,
+            userId: summary?.user_id ?? calib?.user_id ?? null,
             displayName: profile.display_name,
             joinedAt: profile.member_since,
-            meanBrier,
-            nResolved: myRow?.n_resolved ?? scored.length,
-            globalRank: myRow?.rank ?? null,
-            totalRanked: global?.entries.length ?? 0,
+            // Пока рейтинг не посчитан (мало разрешённых событий), показываем
+            // средний Brier по собственным оценённым прогнозам — не «—» на пустом месте.
+            meanBrier:
+              globalStat?.meanBrier ??
+              (scored.length
+                ? scored.reduce((a, p) => a + Number(p.brier_score), 0) / scored.length
+                : null),
+            nResolved: globalStat?.nResolved ?? scored.length,
+            globalRank: globalStat?.rank ?? null,
+            seasonRank: seasonStat,
             // Без бакетов не показываем eceOf([])=0 как «идеальную» калибровку.
             eceValue: buckets.length ? (calib?.ece ?? eceOf(buckets)) : null,
             calibration: buckets,
@@ -223,8 +211,17 @@ export default function ProfilePage() {
             <p className="num text-2xl font-700 text-[color:var(--color-signal-deep)]">
               {vm.globalRank ? `#${vm.globalRank}` : "—"}
             </p>
-            <p className="text-xs tnum text-slate">{vm.totalRanked ? `из ${vm.totalRanked}` : "вне зачёта"}</p>
+            <p className="text-xs tnum text-slate">{vm.globalRank ? "по всем предсказателям" : "вне зачёта"}</p>
           </div>
+          {vm.seasonRank && (
+            <div className="rounded-2xl border border-line bg-surface px-5 py-3 text-center">
+              <p className="text-xs text-slate">Место в сезоне</p>
+              <p className="num text-2xl font-700 text-[color:var(--color-signal-deep)]">
+                #{vm.seasonRank.rank}
+              </p>
+              <p className="text-xs tnum text-slate">текущий сезон</p>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -298,11 +295,9 @@ export default function ProfilePage() {
                   return (
                     <li key={c.categorySlug}>
                       <div className="flex items-baseline justify-between">
-                        <span className="text-sm font-600">
-                          {categoryMap.get(c.categorySlug) ?? c.categorySlug}
-                        </span>
+                        <span className="text-sm font-600">{c.categoryTitle}</span>
                         <span className="text-xs tnum text-slate">
-                          Brier {fmtBrier(c.meanBrier)} · {c.nResolved}
+                          #{c.rank} · Brier {fmtBrier(c.meanBrier)} · {c.nResolved}
                         </span>
                       </div>
                       <div className="mt-2 h-2 rounded-full bg-paper">

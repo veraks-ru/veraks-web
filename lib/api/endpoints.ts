@@ -27,6 +27,7 @@ import type {
   ApiPrediction,
   ApiPredictionSummary,
   ApiPrizeFund,
+  ApiProfileSummary,
   ApiPublicProfile,
   ApiQualification,
   ApiResolution,
@@ -112,6 +113,10 @@ export const getPublicProfile = (username: string) =>
 
 export const getCalibration = (username: string) =>
   apiFetch<ApiCalibration>(`/users/${username}/calibration`, { allow: [404] });
+
+/** Сводка профиля: global/категории/активный сезон — одним запросом, готовые агрегаты. */
+export const getProfileSummary = (username: string) =>
+  apiFetch<ApiProfileSummary>(`/users/${username}/summary`, { allow: [404] });
 
 export const lookupUser = (userId: string) =>
   apiFetch<ApiUserRef>(`/users/lookup/${userId}`, { allow: [404] });

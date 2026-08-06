@@ -133,6 +133,32 @@ export interface ApiPublicProfile {
   member_since: string;
 }
 
+/** Метрики пользователя в одной области сводки (готовый агрегат, без пересчёта). */
+export interface ApiProfileScopeRating {
+  rank: number;
+  skill_score: string;
+  mean_brier: string;
+  n_resolved: number;
+}
+
+export interface ApiProfileCategoryRating extends ApiProfileScopeRating {
+  category_id: string;
+  slug: string;
+  title: string;
+}
+
+export interface ApiProfileSeasonRating extends ApiProfileScopeRating {
+  season_id: string;
+}
+
+/** GET /users/{username}/summary — сводка профиля (global/категории/активный сезон). */
+export interface ApiProfileSummary {
+  user_id: string;
+  global: ApiProfileScopeRating | null;
+  categories: ApiProfileCategoryRating[];
+  season: ApiProfileSeasonRating | null;
+}
+
 export interface ApiUserRef {
   user_id: string;
   username: string;

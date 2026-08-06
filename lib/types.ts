@@ -58,8 +58,19 @@ export interface CalibrationBucket {
   nYes: number;
 }
 
+/** Срез сводки профиля по одной категории (из GET /users/{username}/summary). */
 export interface CategoryStat {
   categorySlug: string;
+  categoryTitle: string;
+  rank: number;
+  meanBrier: number;
+  nResolved: number;
+}
+
+/** Срез сводки профиля по области (global/сезон) — готовый агрегат рейтинга. */
+export interface ScopeRatingStat {
+  rank: number;
+  skillScore: number;
   meanBrier: number;
   nResolved: number;
 }
@@ -67,7 +78,6 @@ export interface CategoryStat {
 export interface HistoryItem {
   eventSlug: string;
   title: string;
-  categorySlug: string;
   gradeIndex: number;
   outcome: boolean;
   brier: number;
