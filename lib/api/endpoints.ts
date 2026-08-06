@@ -35,6 +35,7 @@ import type {
   ApiSocialStats,
   ApiSponsorFundDetail,
   ApiSubscription,
+  ApiTopPrediction,
   ApiUserRef,
 } from "./dto";
 
@@ -69,6 +70,12 @@ export const getPredictionSummary = (id: string) =>
 
 export const getResolution = (id: string) =>
   apiFetch<ApiResolution>(`/events/${id}/resolution`, { allow: [404] });
+
+/** Доска лучших прогнозов. Доступна только для разрешённого события → null на 404/409. */
+export const getEventTopPredictions = (id: string, limit = 10) =>
+  apiFetch<ApiTopPrediction[]>(`/events/${id}/top-predictions?limit=${limit}`, {
+    allow: [404, 409],
+  });
 
 /* ── Прогнозы ── */
 

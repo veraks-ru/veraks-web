@@ -66,6 +66,16 @@ export interface ApiPredictionSummary {
   mean_probability: string | null;
 }
 
+/** Строка доски лучших прогнозов разрешённого события (GET /events/{id}/top-predictions). */
+export interface ApiTopPrediction {
+  user_id: string;
+  username: string;
+  display_name: string;
+  confidence_grade: ConfidenceGrade;
+  brier_score: string; // Decimal как строка
+  beat_crowd: boolean;
+}
+
 export interface ApiRating {
   user_id: string;
   scope_type: "global" | "category" | "season";

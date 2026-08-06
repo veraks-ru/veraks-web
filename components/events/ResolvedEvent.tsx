@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { Disputes } from "@/components/events/Disputes";
 import { EventComments } from "@/components/events/EventComments";
+import { TopPredictions } from "@/components/events/TopPredictions";
 import { CategoryChip } from "@/components/ui/Badge";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdShares, crowdTotal } from "@/lib/crowd";
@@ -93,6 +94,9 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
           </p>
           <ScoringBars event={event} gradeBrier={gradeBrier} myIdx={myIdx} />
         </section>
+
+        {/* Доска лучших: публичная витрина точности (не выигрыша) */}
+        <TopPredictions eventId={event.id} />
 
         {/* Источник истины */}
         <section className="mt-6 rounded-[var(--radius-card)] border border-line bg-surface p-6 text-sm">
