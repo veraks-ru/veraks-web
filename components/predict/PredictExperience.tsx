@@ -7,6 +7,7 @@ import { EventComments } from "@/components/events/EventComments";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
+import { ApiError } from "@/lib/api/client";
 import { putPrediction } from "@/lib/api/endpoints";
 import { useCategoryTitle } from "@/lib/api/useCategories";
 import { deadlineLabel } from "@/lib/format";
@@ -14,6 +15,8 @@ import { useAuth } from "@/components/app/AuthProvider";
 import type { PredictionEvent } from "@/lib/types";
 
 type Phase = "edit" | "submitting" | "done";
+/** Чем закончилась неудачная отправка: нет согласий (403) или прочий сбой. */
+type SubmitError = "consent" | "generic";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
   const { me } = useAuth();
@@ -21,19 +24,25 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
   const [chosen, setChosen] = useState<number | null>(initial);
   const [phase, setPhase] = useState<Phase>(event.myGrade ? "done" : "edit");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<SubmitError | null>(null);
 
   const hadPrediction = initial !== null;
 
   async function submit() {
     if (chosen == null) return;
-    setError(false);
+    setError(null);
     setPhase("submitting");
     try {
       await putPrediction(event.id, GRADES[chosen].grade);
       setPhase("done");
-    } catch {
-      setError(true);
+    } catch (e) {
+      // Сервер отдаёт 403 ConsentRequiredError, если согласия не подтверждены
+      // (обычно сюда ведёт гард AuthProvider, но версию документа могли
+      // поднять уже после загрузки страницы) — зовём на онбординг, а не
+      // предлагаем «попробовать ещё раз».
+      const consent =
+        e instanceof ApiError && e.status === 403 && e.code === "ConsentRequiredError";
+      setError(consent ? "consent" : "generic");
       setPhase("edit");
     }
   }
@@ -147,9 +156,17 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
               </p>
             </>
           )}
-          {error && (
+          {error === "generic" && (
             <p className="mt-3 text-center text-sm text-warm" role="alert">
               Не удалось сохранить. Попробуйте ещё раз.
+            </p>
+          )}
+          {error === "consent" && (
+            <p className="mt-3 text-center text-sm text-warm" role="alert">
+              Подтвердите согласия, чтобы участвовать.{" "}
+              <Link href="/onboarding" className="font-600 text-white underline">
+                Перейти к согласиям
+              </Link>
             </p>
           )}
         </div>
