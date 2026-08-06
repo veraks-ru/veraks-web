@@ -2,20 +2,47 @@
 
 Имитирует OIDC authorization code flow ровно в той форме, которую ожидает
 ``EsiaOidcGateway`` бэкенда: страница /authorize с выбором «гражданина»,
-обмен кода на токен в /token, атрибуты в /userinfo.
+обмен кода на токен в /token, атрибуты в /userinfo. Поддержаны механизмы
+боевого потока (T12), чтобы локально проверялся тот же код, что и в проде:
 
-НЕ для прода: здесь нет криптографии, подписей и реальной ЕСИА. В бою на это
-место встаёт сертифицированный шлюз/интегратор.
+* **PKCE (S256)** — ``code_challenge`` запоминается на /authorize и
+  сверяется с ``code_verifier`` на /token; несовпадение → ``invalid_grant``;
+* **nonce** — запоминается на /authorize и кладётся в ``id_token``;
+* **подписанный id_token** — RS256 ключом, который генерируется при старте
+  процесса; публичная часть отдаётся в /jwks (``ESIA_JWKS_URL`` бэкенда);
+* **отказ пользователя** — ссылка «Отказаться» возвращает
+  ``?error=access_denied`` (проверка ветки «Вход отменён» на фронте).
+
+НЕ для прода: ключ живёт в памяти, гражданин выбирается кликом, никакой
+реальной ЕСИА тут нет. В бою на это место встаёт сертифицированный
+шлюз/интегратор.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import os
+import secrets
+import time
 from urllib.parse import parse_qs, urlencode
 
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 app = FastAPI(title="Mock ЕСИА (dev only)")
+
+# ``iss`` в id_token. Значение должно совпадать с ESIA_ISSUER бэкенда, поэтому
+# оно одно на все окружения мока (в docker/k8s задаётся переменной).
+ISSUER = os.environ.get("MOCK_ESIA_ISSUER", "http://localhost:9000")
+_ID_TOKEN_TTL_SECONDS = 300
+
+# Ключ подписи id_token: генерируется при старте процесса (перезапуск мока —
+# новый ключ; бэкенд перечитает JWKS, увидев незнакомый kid).
+_KEY_ID = "mock-esia-key-1"
+_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 # СНИЛС с номером <= 001-001-998 не проверяются контрольной суммой (домен
 # Snils), поэтому используем такие — валидны без вычисления чек-суммы.
@@ -27,12 +54,36 @@ CITIZENS: dict[str, dict[str, str]] = {
     "baseline": {"oid": "1000000003", "snils": "00100150300", "first": "Борис", "last": "Базлайнов", "middle": "Петрович"},
 }
 
+# Выданные authorization code → параметры потока (PKCE/nonce/клиент).
+# In-memory: перезапуск мока обрывает начатые входы, для дева это нормально.
+FLOWS: dict[str, dict[str, str]] = {}
+_MAX_FLOWS = 200
+
+
+def _b64u_uint(value: int) -> str:
+    """Целое → base64url без выравнивания (формат чисел JWK)."""
+    raw = value.to_bytes((value.bit_length() + 7) // 8 or 1, "big")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _s256(verifier: str) -> str:
+    """PKCE-преобразование S256 (RFC 7636 §4.2)."""
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+
+def _citizen_key(code: str) -> str:
+    """Из выданного кода (``<ключ>.<случайный хвост>``) достаёт ключ гражданина."""
+    return code.split(".", 1)[0]
+
 
 def _citizen_for(code: str) -> dict[str, str]:
-    if code in CITIZENS:
-        return CITIZENS[code]
-    # «Новый гражданин»: code вида new-<n> → детерминированный свежий СНИЛС.
-    n = abs(hash(code)) % 800
+    key = _citizen_key(code)
+    if key in CITIZENS:
+        return CITIZENS[key]
+    # «Новый гражданин»: ключ new-citizen → детерминированный свежий СНИЛС
+    # (в пределах жизни процесса — тот же аккаунт при повторных входах).
+    n = abs(hash(key)) % 800
     num = 1001000 + n  # 9-значный префикс <= 001-001-998
     snils = f"{num:09d}00"
     return {"oid": f"9{num}", "snils": snils, "first": "Новый", "last": "Гражданин", "middle": ""}
@@ -40,11 +91,30 @@ def _citizen_for(code: str) -> dict[str, str]:
 
 @app.get("/authorize", response_class=HTMLResponse)
 async def authorize(request: Request) -> HTMLResponse:
-    """Страница выбора учётной записи (вместо реального входа в Госуслуги)."""
-    redirect_uri = request.query_params.get("redirect_uri", "")
-    state = request.query_params.get("state", "")
+    """Страница выбора учётной записи (вместо реального входа в Госуслуги).
 
-    def link(code: str) -> str:
+    Здесь же запоминаются параметры потока (PKCE-challenge, nonce, client_id):
+    какой из выданных кодов выберет пользователь, заранее неизвестно, поэтому
+    регистрируем их все.
+    """
+    q = request.query_params
+    redirect_uri = q.get("redirect_uri", "")
+    state = q.get("state", "")
+    flow = {
+        "code_challenge": q.get("code_challenge", ""),
+        "code_challenge_method": q.get("code_challenge_method", ""),
+        "nonce": q.get("nonce", ""),
+        "client_id": q.get("client_id", ""),
+    }
+
+    def link(citizen_key: str) -> str:
+        # Уникальный код на каждый клик: параметры PKCE/nonce привязаны к нему.
+        code = f"{citizen_key}.{secrets.token_urlsafe(8)}"
+        # Неиспользованные коды копятся (на каждый показ страницы — по одному
+        # на ссылку); держим карту небольшой, выбрасывая самые старые.
+        while len(FLOWS) >= _MAX_FLOWS:
+            FLOWS.pop(next(iter(FLOWS)))
+        FLOWS[code] = dict(flow)
         return f"{redirect_uri}?{urlencode({'code': code, 'state': state})}"
 
     rows = "".join(
@@ -53,6 +123,7 @@ async def authorize(request: Request) -> HTMLResponse:
         for key, c in CITIZENS.items()
     )
     new_link = link("new-citizen")
+    deny_link = f"{redirect_uri}?{urlencode({'error': 'access_denied', 'error_description': 'Пользователь отказался предоставить данные', 'state': state})}"
 
     html = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -71,6 +142,9 @@ async def authorize(request: Request) -> HTMLResponse:
   li span{{color:#9aa3c0;font-size:12px}}
   .new{{display:block;text-align:center;padding:12px;border-radius:12px;
         background:#46e0c4;color:#091022;font-weight:700;text-decoration:none}}
+  .deny{{display:block;text-align:center;padding:12px;margin-top:8px;color:#9aa3c0;
+         font-size:13px;text-decoration:none}}
+  .deny:hover{{color:#fff}}
   .tag{{display:inline-block;background:rgba(70,224,196,.12);color:#46e0c4;
         font-size:11px;padding:4px 8px;border-radius:999px;margin-bottom:16px}}
 </style></head><body>
@@ -80,6 +154,7 @@ async def authorize(request: Request) -> HTMLResponse:
   <p class="sub">Выберите подтверждённую учётную запись</p>
   <ul>{rows}</ul>
   <a class="new" href="{new_link}">Новый гражданин (свежий аккаунт)</a>
+  <a class="deny" href="{deny_link}">Отказаться (проверка отмены входа)</a>
 </div></body></html>"""
     return HTMLResponse(html)
 
@@ -88,13 +163,74 @@ async def authorize(request: Request) -> HTMLResponse:
 async def token(request: Request) -> JSONResponse:
     """Обмен authorization code на маркеры. access_token = code (для /userinfo).
 
+    Проверяет PKCE: ``code_verifier`` должен давать сохранённый на /authorize
+    ``code_challenge`` по методу S256. Возвращает подписанный id_token с
+    ``nonce`` того же потока.
+
     Тело читаем вручную (application/x-www-form-urlencoded), чтобы не тянуть
     python-multipart ради ``Form(...)``.
     """
-    raw = (await request.body()).decode()
-    code = (parse_qs(raw).get("code") or [""])[0]
+    form = parse_qs((await request.body()).decode())
+    code = (form.get("code") or [""])[0]
+    verifier = (form.get("code_verifier") or [""])[0]
+
+    flow = FLOWS.pop(code, None)
+    if flow is None:
+        return JSONResponse(
+            {"error": "invalid_grant", "error_description": "Неизвестный или использованный код"},
+            status_code=400,
+        )
+    challenge = flow.get("code_challenge", "")
+    if challenge:
+        if flow.get("code_challenge_method") != "S256":
+            return JSONResponse(
+                {"error": "invalid_request", "error_description": "Поддерживается только S256"},
+                status_code=400,
+            )
+        if not verifier or _s256(verifier) != challenge:
+            return JSONResponse(
+                {"error": "invalid_grant", "error_description": "code_verifier не соответствует code_challenge"},
+                status_code=400,
+            )
+
+    citizen = _citizen_for(code)
+    now = int(time.time())
+    client_id = (form.get("client_id") or [flow.get("client_id", "")])[0]
+    id_token = jwt.encode(
+        {
+            "iss": ISSUER,
+            "sub": citizen["oid"],
+            "aud": client_id,
+            "iat": now,
+            "exp": now + _ID_TOKEN_TTL_SECONDS,
+            "nonce": flow.get("nonce", ""),
+        },
+        _PRIVATE_KEY,
+        algorithm="RS256",
+        headers={"kid": _KEY_ID},
+    )
     return JSONResponse(
-        {"access_token": code or "anonymous", "id_token": "mock-id-token", "expires_in": 3600}
+        {"access_token": code or "anonymous", "id_token": id_token, "expires_in": 3600}
+    )
+
+
+@app.get("/jwks")
+async def jwks() -> JSONResponse:
+    """Публичные ключи подписи id_token (JWKS, ``ESIA_JWKS_URL`` бэкенда)."""
+    numbers = _PRIVATE_KEY.public_key().public_numbers()
+    return JSONResponse(
+        {
+            "keys": [
+                {
+                    "kty": "RSA",
+                    "use": "sig",
+                    "alg": "RS256",
+                    "kid": _KEY_ID,
+                    "n": _b64u_uint(numbers.n),
+                    "e": _b64u_uint(numbers.e),
+                }
+            ]
+        }
     )
 
 

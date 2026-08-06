@@ -8,11 +8,17 @@ import { Spinner } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/components/app/AuthProvider";
 
+// Коды OIDC-ошибок, означающие «пользователь сам прервал вход» (а не сбой).
+// Совпадают с _DENIED_OIDC_ERRORS бэкенда.
+const DENIED_ERRORS = new Set(["access_denied", "consent_required", "login_required", "interaction_required"]);
+
+type Failure = { title: string; detail: string };
+
 function CallbackInner() {
   const params = useSearchParams();
   const router = useRouter();
   const { refresh } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -20,8 +26,18 @@ function CallbackInner() {
     ran.current = true;
     const code = params.get("code");
     const state = params.get("state");
+    // Госуслуги вернули отказ вместо кода: обменивать нечего — бэкенд не дёргаем.
+    const oidcError = params.get("error");
+    if (oidcError) {
+      setError(
+        DENIED_ERRORS.has(oidcError)
+          ? { title: "Вход отменён", detail: "Вы не подтвердили вход через Госуслуги. Можно попробовать снова." }
+          : { title: "Госуслуги недоступны", detail: "Сервис авторизации вернул ошибку. Попробуйте войти ещё раз чуть позже." },
+      );
+      return;
+    }
     if (!code || !state) {
-      setError("Не передан код авторизации");
+      setError({ title: "Не удалось войти", detail: "Госуслуги не передали код авторизации." });
       return;
     }
     (async () => {
@@ -31,7 +47,10 @@ function CallbackInner() {
         const me = await refresh();
         router.replace(me?.needs_onboarding ? "/onboarding" : "/events");
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Не удалось завершить вход");
+        setError({
+          title: "Не удалось войти",
+          detail: e instanceof Error ? e.message : "Не удалось завершить вход",
+        });
       }
     })();
   }, [params, refresh, router]);
@@ -44,8 +63,8 @@ function CallbackInner() {
         </div>
         {error ? (
           <div role="alert">
-            <h1 className="font-display text-xl font-600">Не удалось войти</h1>
-            <p className="mt-2 text-sm text-haze">{error}</p>
+            <h1 className="font-display text-xl font-600">{error.title}</h1>
+            <p className="mt-2 text-sm text-haze">{error.detail}</p>
             <ButtonLink href="/join" variant="signal" className="mt-6 w-full">
               Попробовать снова
             </ButtonLink>

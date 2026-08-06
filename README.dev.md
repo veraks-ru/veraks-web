@@ -53,9 +53,18 @@ cd ../../ && npm install && npm run dev    # http://localhost:3000
 - **kalibr** → @kalibr, роль **admin**, есть история;
 - **mediana** → роль **admin** (нужен второй админ для подтверждения выплат);
 - **baseline** → роль **arbiter**;
-- «Новый гражданин» → свежий аккаунт (роль user).
+- «Новый гражданин» → свежий аккаунт (роль user);
+- «Отказаться» → возврат с `error=access_denied` (проверка экрана «Вход отменён»).
 
 Уникальность «1 человек = 1 аккаунт» — по хэшу СНИЛС.
+
+Мок повторяет боевой OIDC-поток: PKCE (S256), `nonce` и подписанный
+`id_token` (ключ RS256 генерируется при старте мока, публичная часть — на
+http://localhost:9000/jwks). Чтобы бэкенд проверял маркер, в его `.env`
+должны быть `ESIA_ISSUER=http://localhost:9000` и
+`ESIA_JWKS_URL=http://localhost:9000/jwks` (в `docker compose --profile full`
+уже прописаны). Вне `APP_ENV=local` пустой `ESIA_JWKS_URL` не даст бэкенду
+стартовать.
 
 ## Админка (`/admin`)
 

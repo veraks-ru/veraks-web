@@ -27,6 +27,10 @@ x-backend-env: &backend-env
   ESIA_TOKEN_ENDPOINT: http://mock-esia:9000/token
   ESIA_USERINFO_ENDPOINT: http://mock-esia:9000/userinfo
   ESIA_REQUIRE_CONFIRMED: "true"
+  # Проверка id_token по JWKS мока. ISSUER — строка внутри маркера (одна на всех,
+  # совпадает с MOCK_ESIA_ISSUER), JWKS_URL — server-to-server адрес сервиса.
+  ESIA_ISSUER: http://localhost:9000
+  ESIA_JWKS_URL: http://mock-esia:9000/jwks
   # Локально окно оспаривания = 0ч: «Разрешить → Посчитать» в админке срабатывает
   # сразу (в проде окно реальное, по умолчанию 72ч).
   RESOLUTIONS_DISPUTE_WINDOW_HOURS: "0"
@@ -76,6 +80,9 @@ services:
   mock-esia:
     profiles: ["full"]
     build: ./dev/mock-esia
+    environment:
+      # ``iss`` подписанного id_token — должен совпадать с ESIA_ISSUER бэкенда.
+      MOCK_ESIA_ISSUER: http://localhost:9000
     ports:
       - "9000:9000"
 
