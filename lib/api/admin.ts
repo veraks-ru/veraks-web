@@ -3,7 +3,9 @@
 
 import { apiFetch } from "./client";
 import type {
+  ApiAuditLogPage,
   ApiCategory,
+  ApiChainVerification,
   ApiDispute,
   ApiEvent,
   ApiPayout,
@@ -176,3 +178,22 @@ export const getSeasonRecalibration = (seasonId: string) =>
     `/admin/seasons/${seasonId}/recalibration`,
     { allow: [404, 400] },
   );
+
+/* ── Аудит-журнал (только admin) ── */
+
+export function listAuditLog(params: {
+  action?: string;
+  beforeId?: number;
+  limit?: number;
+} = {}) {
+  const q = new URLSearchParams();
+  if (params.action) q.set("action", params.action);
+  if (params.beforeId != null) q.set("before_id", String(params.beforeId));
+  q.set("limit", String(params.limit ?? 30));
+  return apiFetch<ApiAuditLogPage>(`/admin/audit-log?${q.toString()}`, {
+    allow: [403],
+  });
+}
+
+export const verifyAuditLog = () =>
+  apiFetch<ApiChainVerification>("/admin/audit-log/verify", { method: "POST" });

@@ -362,3 +362,30 @@ export interface ApiPlan {
   plan: string;
   price_kopecks: number;
 }
+
+// ── Аудит-журнал (только admin) ──
+export interface ApiAuditLogEntry {
+  id: number;
+  occurred_at: string;
+  actor_id: string | null;
+  actor_type: "user" | "editor" | "arbiter" | "admin" | "system";
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  prev_hash: string | null;
+  hash: string;
+}
+
+export interface ApiAuditLogPage {
+  items: ApiAuditLogEntry[];
+  has_more: boolean;
+}
+
+export interface ApiChainVerification {
+  ok: boolean;
+  checked: number;
+  first_broken_id: number | null;
+}
