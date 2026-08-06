@@ -11,9 +11,13 @@ const LINKS = [
   { href: "/admin/prizes", label: "Призовой фонд" },
 ];
 
-// Журнал аудита содержит действия всех ролей — доступен только admin
-// (см. require_admin в backend/app/shared/audit/api/dependencies.py).
-const ADMIN_ONLY_LINKS = [{ href: "/admin/audit", label: "Аудит" }];
+// Модерация пользователей и журнал аудита — доступны только admin
+// (см. require_admin в backend/app/modules/identity/api/dependencies.py и
+// backend/app/shared/audit/api/dependencies.py).
+const ADMIN_ONLY_LINKS = [
+  { href: "/admin/users", label: "Пользователи" },
+  { href: "/admin/audit", label: "Аудит" },
+];
 
 export function AdminNav({ role, username }: { role: string; username?: string }) {
   const path = usePathname();

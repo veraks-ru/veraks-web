@@ -3,6 +3,8 @@
 
 import { apiFetch } from "./client";
 import type {
+  ApiAdminUser,
+  ApiAdminUserPage,
   ApiAuditLogPage,
   ApiCategory,
   ApiChainVerification,
@@ -197,3 +199,25 @@ export function listAuditLog(params: {
 
 export const verifyAuditLog = () =>
   apiFetch<ApiChainVerification>("/admin/audit-log/verify", { method: "POST" });
+
+/* ── Пользователи (модерация, только admin) ── */
+
+export function listUsers(
+  params: { status?: string; search?: string; limit?: number; offset?: number } = {},
+) {
+  const q = new URLSearchParams();
+  if (params.status) q.set("status", params.status);
+  if (params.search) q.set("search", params.search);
+  q.set("limit", String(params.limit ?? 30));
+  q.set("offset", String(params.offset ?? 0));
+  return apiFetch<ApiAdminUserPage>(`/admin/users?${q.toString()}`, { allow: [403] });
+}
+
+export const suspendUser = (userId: string, reason: string) =>
+  apiFetch<ApiAdminUser>(`/admin/users/${userId}/suspend`, {
+    method: "POST",
+    body: { reason },
+  });
+
+export const reinstateUser = (userId: string) =>
+  apiFetch<ApiAdminUser>(`/admin/users/${userId}/reinstate`, { method: "POST" });

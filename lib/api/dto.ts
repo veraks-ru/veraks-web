@@ -363,6 +363,21 @@ export interface ApiPlan {
   price_kopecks: number;
 }
 
+// ── Пользователи (модерация, только admin) ──
+export interface ApiAdminUser {
+  id: string;
+  username: string;
+  display_name: string;
+  role: string;
+  status: string;
+  created_at: string;
+}
+
+export interface ApiAdminUserPage {
+  items: ApiAdminUser[];
+  total: number;
+}
+
 // ── Аудит-журнал (только admin) ──
 export interface ApiAuditLogEntry {
   id: number;
