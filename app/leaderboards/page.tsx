@@ -36,6 +36,9 @@ function LeaderboardsInner() {
   // Активный сезон — из API (как в дивизионах/квалификации), не хардкод.
   const [season, setSeason] = useState<ApiSeason | null | undefined>(undefined);
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
+  // Порог участия из меты ответа (см. ApiLeaderboard.min_resolved); null — для
+  // сезона (своя многофакторная квалификация) или если фильтр не применялся.
+  const [minResolved, setMinResolved] = useState<number | null>(null);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
 
@@ -86,7 +89,10 @@ function LeaderboardsInner() {
           nResolved: e.n_resolved,
           isMe: !!me && refs[i]?.username === me.username,
         }));
-        if (alive) setRows(out);
+        if (alive) {
+          setRows(out);
+          setMinResolved(lb?.min_resolved ?? null);
+        }
       } catch {
         if (alive) setError(true);
       }
@@ -148,7 +154,13 @@ function LeaderboardsInner() {
           ) : (
             <>
               <LeaderboardTable rows={rows} />
-              <p className="mt-4 text-xs leading-relaxed text-slate">
+              {minResolved !== null && (
+                <p className="mt-4 text-xs leading-relaxed text-slate">
+                  В рейтинге участвуют прогнозисты с ≥{minResolved} разрешённых прогнозов
+                  {scope === "category" ? " в категории" : ""}.
+                </p>
+              )}
+              <p className={`${minResolved !== null ? "mt-2" : "mt-4"} text-xs leading-relaxed text-slate`}>
                 Средний Brier по разным наборам событий сопоставим не полностью — порог
                 участия и общий пул сезона смягчают это.
               </p>

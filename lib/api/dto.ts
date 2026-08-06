@@ -82,6 +82,13 @@ export interface ApiLeaderboard {
   scope_type: string;
   scope_id: string | null;
   entries: ApiRating[];
+  /**
+   * Применённый порог участия (n_resolved) для global/category при
+   * qualified_only=true (бэкенд: LEADERBOARD_MIN_RESOLVED_GLOBAL/_CATEGORY,
+   * app/modules/scoring/domain/constants.py). null — фильтр не применялся
+   * (qualified_only=false) или это сезонный лидерборд (своя квалификация).
+   */
+  min_resolved: number | null;
 }
 
 export interface ApiCalibrationBin {
