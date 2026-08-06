@@ -41,7 +41,7 @@ export default async function LegalDocPage({
   const { slug } = await params;
   const data = load(slug);
   if (!data) notFound();
-  const { doc, title, blocks } = data;
+  const { title, blocks } = data;
   const others = LEGAL_DOCS.filter((d) => d.slug !== (slug as LegalSlug));
 
   return (

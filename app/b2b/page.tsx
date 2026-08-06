@@ -26,7 +26,6 @@ export default function B2bPage() {
       return;
     }
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, authLoading]);
 
   return (

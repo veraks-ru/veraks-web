@@ -32,7 +32,6 @@ export default function LeaguesPage() {
       return;
     }
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, authLoading]);
 
   return (
