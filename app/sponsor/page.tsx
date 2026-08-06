@@ -169,8 +169,12 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
 
   useEffect(() => {
     if (open && detail === undefined) loadDetail();
+    // detail читается только чтобы не перезапрашивать уже загруженное — в
+    // deps его не кладём: loadDetail() сама делает setDetail(undefined), и
+    // если бы detail был в deps, это перезапускало бы эффект вторым запросом
+    // на каждый клик «Повторить».
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, detail, fund.id]);
+  }, [open, fund.id]);
 
   return (
     <li className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
@@ -232,7 +236,7 @@ function FundCard({ fund, onChanged }: { fund: ApiPrizeFund; onChanged: () => vo
               bare
             />
           ) : detail.payouts.length === 0 ? (
-            <p className="text-sm text-slate">Выплат из фонда пока не было.</p>
+            <EmptyState title="Выплат из фонда пока не было" className="py-6" bare />
           ) : (
             <ul className="space-y-2">
               {detail.payouts.map((p) => (

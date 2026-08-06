@@ -190,8 +190,13 @@ function LeagueCard({
 
   useEffect(() => {
     if (open && standings === undefined && !stErr) loadStandings();
+    // standings/stErr читаются только чтобы не перезапрашивать уже
+    // загруженное/зафейленное — в deps их не кладём: loadStandings() сама их
+    // сбрасывает (setStandings(undefined), setStErr(false)), и если бы они
+    // были в deps, это перезапускало бы эффект вторым запросом на каждый клик
+    // «Повторить» (и на каждую успешную загрузку).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, standings, stErr, league.id]);
+  }, [open, league.id]);
 
   return (
     <li className="rounded-[var(--radius-card)] border border-line bg-surface p-4">

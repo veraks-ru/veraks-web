@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/app/TopNav";
-import { LoadingState, ErrorState } from "@/components/ui/AsyncStates";
+import { LoadingState, EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useAuth } from "@/components/app/AuthProvider";
 import { listSeasons, getDivisionStandings } from "@/lib/api/endpoints";
 import type { ApiDivisionStandings, ApiSeason } from "@/lib/api/dto";
@@ -63,7 +63,7 @@ export default function DivisionsPage() {
         ) : season === undefined ? (
           <LoadingState />
         ) : season === null ? (
-          <p className="mt-8 text-sm text-slate">Активного сезона пока нет.</p>
+          <EmptyState title="Активного сезона пока нет" className="mt-8 py-10" />
         ) : (
           <>
             <div className="mt-6 flex gap-2">
@@ -93,7 +93,7 @@ export default function DivisionsPage() {
               ) : standings === undefined ? (
                 <LoadingState className="py-4" />
               ) : standings === null ? (
-                <p className="py-4 text-sm text-slate">В этом дивизионе пока нет участников.</p>
+                <EmptyState title="В этом дивизионе пока нет участников" className="py-4" bare />
               ) : (
                 <>
                   <p className="mb-3 text-sm font-600">{standings.title}</p>
