@@ -8,8 +8,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { getSeasonPrizeFund } from "@/lib/api/admin";
 import { lookupUser, getSeason, getPrizeFund } from "@/lib/api/endpoints";
 import type { ApiSeasonPrizeFund } from "@/lib/api/dto";
+import { rub } from "@/lib/format";
 
-const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 const PAYOUT_STATUS: Record<string, string> = {
   pending: "создана",
   approved: "подтверждена",

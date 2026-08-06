@@ -4,15 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { Spinner } from "@/components/ui/Spinner";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, SEASON_STATUS_LABEL } from "@/lib/format";
 import { listSeasons } from "@/lib/api/endpoints";
 import type { ApiSeason } from "@/lib/api/dto";
-
-const STATUS_LABEL: Record<ApiSeason["status"], string> = {
-  upcoming: "Скоро",
-  active: "Идёт",
-  finished: "Завершён",
-};
 
 export default function SeasonsPage() {
   const [seasons, setSeasons] = useState<ApiSeason[] | null>(null);
@@ -61,7 +55,7 @@ export default function SeasonsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">
-                        {STATUS_LABEL[s.status]}
+                        {SEASON_STATUS_LABEL[s.status]}
                       </span>
                       <Link
                         href={`/leaderboards?season=${s.slug}`}

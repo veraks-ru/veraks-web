@@ -1,7 +1,20 @@
 // Форматирование для интерфейса. Всё на русском, числа — табличными цифрами.
 
+import type { ApiSeason } from "./api/dto";
+
 /** Brier и калибровка показываются с тремя знаками: 0.142 */
 export const fmtBrier = (v: number): string => v.toFixed(3);
+
+/** Сумма в копейках → рубли с разделителями разрядов: 12 345 ₽ */
+export const rub = (kopecks: number): string =>
+  `${(kopecks / 100).toLocaleString("ru-RU")} ₽`;
+
+/** Подпись статуса сезона (для чипов и заголовков) — «Скоро»/«Идёт»/«Завершён». */
+export const SEASON_STATUS_LABEL: Record<ApiSeason["status"], string> = {
+  upcoming: "Скоро",
+  active: "Идёт",
+  finished: "Завершён",
+};
 
 /**
  * Цвет точности прогноза по Brier — CSS-токен, НЕ красно-зелёный светофор

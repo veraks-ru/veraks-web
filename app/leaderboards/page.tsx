@@ -7,6 +7,7 @@ import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { useAuth } from "@/components/app/AuthProvider";
 import type { LeaderboardRow, LeaderboardScope } from "@/lib/types";
 import type { ApiCategory, ApiSeason } from "@/lib/api/dto";
+import { SEASON_STATUS_LABEL } from "@/lib/format";
 import {
   getCategoryLeaderboard,
   getGlobalLeaderboard,
@@ -172,12 +173,6 @@ function LeaderboardsInner() {
   );
 }
 
-const SEASON_STATUS: Record<ApiSeason["status"], string> = {
-  upcoming: "скоро",
-  active: "идёт",
-  finished: "завершён",
-};
-
 function SeasonBanner({ season }: { season: ApiSeason | null | undefined }) {
   if (season === undefined) {
     return (
@@ -201,7 +196,7 @@ function SeasonBanner({ season }: { season: ApiSeason | null | undefined }) {
           </p>
         </div>
         <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">
-          {SEASON_STATUS[season.status]}
+          {SEASON_STATUS_LABEL[season.status].toLowerCase()}
         </span>
       </div>
     </div>

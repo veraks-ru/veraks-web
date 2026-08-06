@@ -5,18 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { TopNav } from "@/components/app/TopNav";
 import { Spinner } from "@/components/ui/Spinner";
-import { fmtDate, fmtPercent } from "@/lib/format";
+import { fmtDate, fmtPercent, rub, SEASON_STATUS_LABEL } from "@/lib/format";
 import { getSeasonPrizeFund } from "@/lib/api/admin";
 import { getSeason } from "@/lib/api/endpoints";
 import type { ApiSeason, ApiSeasonPrizeFund, LeagueConfigInput } from "@/lib/api/dto";
-
-const STATUS_LABEL: Record<ApiSeason["status"], string> = {
-  upcoming: "Скоро",
-  active: "Идёт",
-  finished: "Завершён",
-};
-
-const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 
 // Человеческие подписи и пояснения для замороженного снапшота правил лиги.
 // Порядок и формулировки — см. scoring_system_design.md и
@@ -121,7 +113,7 @@ export default function SeasonPage() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-600 sm:text-3xl">{season.title}</h1>
           <span className="rounded-full bg-[color:var(--color-signal)]/12 px-3 py-1.5 text-xs font-600 text-[color:var(--color-signal-deep)]">
-            {STATUS_LABEL[season.status]}
+            {SEASON_STATUS_LABEL[season.status]}
           </span>
         </div>
         <p className="mt-1.5 text-sm text-slate">

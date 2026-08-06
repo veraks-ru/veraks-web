@@ -7,7 +7,7 @@ import { TopNav } from "@/components/app/TopNav";
 import { useAuth } from "@/components/app/AuthProvider";
 import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/admin/ui";
 import { Spinner } from "@/components/ui/Spinner";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, rub } from "@/lib/format";
 import {
   getMySubscription,
   cancelSubscription,
@@ -21,7 +21,6 @@ import { TARIFFS } from "@/lib/pricing";
 import { SBP_BANKS } from "@/lib/sbpBanks";
 import type { ApiPayout, ApiPayoutRequisites, ApiSubscription } from "@/lib/api/dto";
 
-const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 const PAYOUT_STATUS: Record<string, string> = {
   pending: "создана",
   approved: "подтверждена",

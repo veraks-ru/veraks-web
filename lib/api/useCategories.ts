@@ -4,7 +4,7 @@
 // а не из мока. Общий модульный кэш: первый компонент, которому понадобился
 // справочник, запускает запрос, остальные переиспользуют результат.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listCategories } from "./endpoints";
 import type { ApiCategory } from "./dto";
 
@@ -62,7 +62,7 @@ export function useCategoryList(): ApiCategory[] {
 /** Карта slug → title из справочника категорий. Пока не загружен — пустая. */
 export function useCategoryMap(): Map<string, string> {
   const cats = useCategoriesCache();
-  return new Map(cats.map((c) => [c.slug, c.title]));
+  return useMemo(() => new Map(cats.map((c) => [c.slug, c.title])), [cats]);
 }
 
 /** Название категории по slug с фолбэком на сам slug, пока справочник грузится. */

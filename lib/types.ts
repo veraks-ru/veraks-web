@@ -12,11 +12,6 @@ export type EventStatus =
   /** Аннулировано после исхода: прогнозы не участвуют в рейтингах. */
   | "annulled";
 
-export interface Category {
-  slug: string;
-  title: string;
-}
-
 /** Распределение прогнозов толпы по 5 градациям (индексы 0..4). */
 export interface CrowdDistribution {
   /** counts[i] — сколько участников выбрали GRADES[i] */

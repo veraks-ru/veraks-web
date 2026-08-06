@@ -13,8 +13,7 @@ import {
   getSponsorFund,
 } from "@/lib/api/endpoints";
 import type { ApiPrizeFund, ApiSponsorFundDetail } from "@/lib/api/dto";
-
-const rub = (k: number) => `${(k / 100).toLocaleString("ru-RU")} ₽`;
+import { rub } from "@/lib/format";
 
 const FUND_STATUS: Record<string, string> = {
   announced: "Анонсирован",

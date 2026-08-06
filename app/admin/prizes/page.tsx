@@ -10,8 +10,8 @@ import {
   listPayouts, createPayout, approvePayout, dispatchPayout,
 } from "@/lib/api/admin";
 import type { ApiPayout, ApiPrizeFund, ApiSeason, ApiSeasonPrizeFund } from "@/lib/api/dto";
+import { rub } from "@/lib/format";
 
-const rub = (kop: number) => `${(kop / 100).toLocaleString("ru-RU")} ₽`;
 const PAYOUT_LABEL: Record<string, string> = {
   pending: "Создана", approved: "Подтверждена", processing: "Отправлена в банк", paid: "Выплачена", failed: "Ошибка",
 };
