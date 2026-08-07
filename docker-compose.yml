@@ -5,11 +5,12 @@
 #   (postgres + redis + backend + worker + mock-esia + frontend)
 #
 # Только слой данных (когда реестр образов / PyPI недоступны, напр. в песочнице):
-#   docker compose up -d            # postgres + redis
+#   docker compose up -d            # postgres + redis + mailpit
 #   далее backend/worker/mock-esia/frontend — на хосте (см. README.dev.md).
 #
 # Бэкенд:   http://localhost:8000   Мок ЕСИА: http://localhost:9000
 # Postgres: localhost:5432          Redis:    localhost:6379
+# Mailpit (веб-интерфейс писем): http://localhost:8025   SMTP: localhost:1025
 
 x-backend-env: &backend-env
   APP_ENV: local
@@ -38,6 +39,19 @@ x-backend-env: &backend-env
   GOCTOPUS_URL: http://goctopus:7890
   GOCTOPUS_USER: orakul
   GOCTOPUS_PASSWORD: goctopus-dev-secret
+  # Провайдеры входа: сейчас только email — ЕСИА выключена флагом (нет
+  # договора с интегратором), код и мок остаются, включаются обратно
+  # добавлением "esia" в список через запятую.
+  AUTH_PROVIDERS: email
+  # Почта (magic-link вход): локально письма улетают в mailpit — реальной
+  # отправки нет, читать на http://localhost:8025. Без логина/пароля/TLS.
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  MAIL_FROM_ADDRESS: noreply@orakul.local
+  MAIL_FROM_NAME: Оракул
+  MAIL_USE_TLS: "false"
+  MAIL_USE_STARTTLS: "false"
+  MAIL_LINK_BASE_URL: http://localhost:3000
 
 services:
   postgres:
@@ -76,6 +90,20 @@ services:
       timeout: 3s
       retries: 20
 
+  # Приём почты для локальной разработки: письма с magic-link входа улетают
+  # сюда вместо реальной отправки. SMTP без логина/пароля/TLS — веб-интерфейс
+  # для чтения писем на http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   # ── Слой приложения в Docker (профиль full; нужен доступ к Docker Hub) ──
   mock-esia:
     profiles: ["full"]
@@ -96,6 +124,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     command: >
       sh -c "alembic upgrade head &&
