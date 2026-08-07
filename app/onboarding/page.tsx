@@ -10,10 +10,7 @@ import { useAuth } from "@/components/app/AuthProvider";
 import { submitOnboarding } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { CONSENT_DOCUMENT_SLUGS, consentDocTitle } from "@/lib/legal";
-
-// Тот же формат, что бэкенд валидирует в POST /users/me/onboarding —
-// проверяем на клиенте, чтобы не гонять 422 туда-обратно за опечатку.
-const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/;
+import { USERNAME_RE } from "@/lib/validation";
 
 const inputCls =
   "w-full rounded-xl border border-[color:var(--color-edge)] bg-[color:var(--color-ink-3)]/60 " +

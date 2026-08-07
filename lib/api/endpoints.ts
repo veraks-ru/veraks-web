@@ -5,6 +5,7 @@ import type { EventInput } from "./admin";
 import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
   ApiApiKey,
+  ApiAuthProviders,
   ApiCalibration,
   ApiCategory,
   ApiComment,
@@ -109,6 +110,21 @@ export const getSeasonLeaderboard = (slug: string, limit = 100) =>
     allow: [404],
   });
 
+/* ── Аутентификация: провайдеры и email-вход ── */
+
+// Публичный: без авторизации, вызывается на /join до входа.
+export const getAuthProviders = () => apiFetch<ApiAuthProviders>("/auth/providers");
+
+// Всегда 202 (анти-энумерация: одинаковый ответ независимо от того,
+// зарегистрирован адрес). Ошибки — 422 (формат) и 429 (лимит) — бросаются
+// как ApiError, их разбирает вызывающий экран.
+export const requestEmailLink = (email: string) =>
+  apiFetch<null>("/auth/email/request", { method: "POST", body: { email } });
+
+// 401 — ссылка устарела/использована/неизвестна, 403 — аккаунт удалён/заблокирован.
+export const completeEmailLogin = (token: string) =>
+  apiFetch<ApiMe>("/auth/email/callback", { method: "POST", body: { token } });
+
 /* ── Пользователи ── */
 
 export const getMe = () => apiFetch<ApiMe>("/auth/me", { allow: [401] });
@@ -174,8 +190,10 @@ export const saveMyPayoutRequisites = (body: {
     body,
   });
 
-export const updateMe = (display_name: string) =>
-  apiFetch<ApiMe>("/users/me", { method: "PATCH", body: { display_name } });
+// email в PATCH не принимается — бэкенд его игнорирует/отвергает (менять
+// адрес нельзя через этот эндпоинт).
+export const updateMe = (body: { username?: string; display_name?: string }) =>
+  apiFetch<ApiMe>("/users/me", { method: "PATCH", body });
 
 // Самостоятельное удаление аккаунта (152-ФЗ) — необратимо, см. /account.
 export const deleteMyAccount = () =>

@@ -161,5 +161,10 @@ export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T |
   }
 
   if (resp.status === 204) return null;
-  return (await resp.json()) as T;
+  try {
+    return (await resp.json()) as T;
+  } catch {
+    // Тело пустое (например, 202 Accepted без содержимого) — не ошибка.
+    return null;
+  }
 }

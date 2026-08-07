@@ -17,8 +17,10 @@ import {
   saveMyPayoutRequisites,
   updateMe,
 } from "@/lib/api/endpoints";
+import { ApiError } from "@/lib/api/client";
 import { TARIFFS } from "@/lib/pricing";
 import { SBP_BANKS } from "@/lib/sbpBanks";
+import { USERNAME_RE } from "@/lib/validation";
 import type { ApiPayout, ApiPayoutRequisites, ApiSubscription } from "@/lib/api/dto";
 
 const PAYOUT_STATUS: Record<string, string> = {
@@ -141,11 +143,11 @@ function DangerZoneSection() {
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-slate">
-            Аккаунт будет удалён безвозвратно: ФИО стирается, псевдоним и имя
-            обнуляются, войти повторно через Госуслуги этим же гражданином
-            будет нельзя. Публичный трек-рекорд прогнозов останется, но
-            обезличенным. Если есть активная подписка — автопродление
-            отменится автоматически (уже списанные средства не возвращаются).
+            Аккаунт будет удалён безвозвратно: ФИО стирается, псевдоним, имя и
+            email обнуляются, войти повторно этим же человеком будет нельзя.
+            Публичный трек-рекорд прогнозов останется, но обезличенным. Если
+            есть активная подписка — автопродление отменится автоматически
+            (уже списанные средства не возвращаются).
           </p>
           <label className="flex items-start gap-2 text-sm">
             <input
@@ -185,29 +187,84 @@ function DangerZoneSection() {
 
 function ProfileSection() {
   const { me, refresh } = useAuth();
+  const [username, setUsername] = useState(me?.username ?? "");
   const [name, setName] = useState(me?.display_name ?? "");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const act = useAction();
 
+  const trimmedUsername = username.trim();
+  const usernameFormatValid = USERNAME_RE.test(trimmedUsername);
+
+  // useAction.run кладёт любое исключение в общий act.error — здесь нужен
+  // особый разбор 409 (псевдоним занят), чтобы показать его инлайн у поля,
+  // поэтому запрос не через act.run, а руками (со своим управлением loading).
   async function save() {
+    setUsernameError(null);
+    if (!trimmedUsername || !usernameFormatValid) {
+      setUsernameError("3–32 символа: латиница в нижнем регистре, цифры, дефис (не первым и не последним)");
+      return;
+    }
     if (!name.trim()) {
       act.setError("Отображаемое имя не может быть пустым");
       return;
     }
-    const r = await act.run(() => updateMe(name.trim()), "Сохранено");
-    if (r) await refresh();
+    act.setError(null);
+    act.setOkMsg(null);
+    setSaving(true);
+    try {
+      const r = await updateMe({
+        username: trimmedUsername !== me?.username ? trimmedUsername : undefined,
+        display_name: name.trim(),
+      });
+      act.setOkMsg("Сохранено");
+      if (r) await refresh();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        setUsernameError("Такой псевдоним уже занят — выберите другой");
+      } else {
+        act.setError(e instanceof Error ? e.message : "Ошибка");
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <Panel title="Профиль" desc="Публично виден только псевдоним и статистика прогнозов">
       <div className="grid gap-4 sm:max-w-md">
         <Field label="Псевдоним">
-          <input className={`${inputCls} bg-paper`} value={`@${me?.username ?? ""}`} disabled />
+          <input
+            className={inputCls}
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setUsernameError(null);
+            }}
+            maxLength={32}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {usernameError && (
+            <span role="alert" className="mt-1 block text-xs text-[color:var(--color-danger)]">
+              {usernameError}
+            </span>
+          )}
         </Field>
         <Field label="Отображаемое имя">
           <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
         </Field>
+        <Field label="Email" hint="Изменить адрес можно по запросу — напишите в поддержку">
+          <input className={`${inputCls} bg-paper`} value={me?.email ?? "не указан"} disabled />
+        </Field>
+        {me?.identity_verified === false && (
+          <div className="rounded-xl bg-[color:var(--color-signal)]/[0.08] px-4 py-3 text-sm text-[color:var(--color-signal-deep)]">
+            Личность не подтверждена. Участие и рейтинг доступны полностью; подтверждение через
+            Госуслуги потребуется для получения приза.
+          </div>
+        )}
         <div>
-          <Btn tone="primary" loading={act.loading} onClick={save}>Сохранить</Btn>
+          <Btn tone="primary" loading={saving} onClick={save}>Сохранить</Btn>
           <Notice error={act.error} ok={act.okMsg} />
         </div>
       </div>

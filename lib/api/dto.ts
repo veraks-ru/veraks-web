@@ -142,6 +142,17 @@ export interface ApiMe {
   // PATCH /users/me (прежний MeResponse) их нет.
   needs_onboarding?: boolean;
   missing_consents?: ApiConsentRequirement[];
+  // Гарантированы в /auth/me; email — null, если вход был только через ЕСИА
+  // без привязанного адреса. identity_verified — прошёл ли человек ЕСИА
+  // (нужно для получения приза), независимо от способа входа.
+  email?: string | null;
+  identity_verified?: boolean;
+}
+
+/** GET /auth/providers — публичный, без авторизации: какие способы входа сейчас включены. */
+export interface ApiAuthProviders {
+  esia: boolean;
+  email: boolean;
 }
 
 export interface ApiPublicProfile {

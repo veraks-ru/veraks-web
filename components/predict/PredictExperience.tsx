@@ -121,7 +121,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
             <GatePanel
               title="Войдите, чтобы голосовать"
               note="Участвовать можно бесплатно. Войдите, чтобы сделать свой прогноз."
-              cta="Войти через Госуслуги"
+              cta="Войти"
               href="/join"
             />
           ) : phase === "done" ? (
