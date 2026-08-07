@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAuth } from "@/components/app/AuthProvider";
 import { NotificationBell } from "@/components/app/NotificationBell";
@@ -15,7 +16,14 @@ const LINKS = [
 
 /** Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел. */
 export function TopNav({ active }: { active?: string }) {
-  const { me, loading } = useAuth();
+  const { me, loading, signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/");
+  }
+
   const links = me
     ? [...LINKS, { href: "/leagues", label: "Лиги" }, { href: "/feed", label: "Лента" }]
     : LINKS;
@@ -67,6 +75,13 @@ export function TopNav({ active }: { active?: string }) {
             </span>
               <span className="hidden text-sm font-600 sm:inline">@{me.username}</span>
             </Link>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite"
+            >
+              Выйти
+            </button>
           </div>
         ) : (
           <Link
