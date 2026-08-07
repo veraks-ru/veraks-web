@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   deleteMyAccount,
   getMe,
@@ -9,6 +9,7 @@ import {
   isSubscriptionActive,
   logout as apiLogout,
 } from "@/lib/api/endpoints";
+import Link from "next/link";
 import { tryRefresh } from "@/lib/api/client";
 import type { ApiMe } from "@/lib/api/dto";
 
@@ -30,9 +31,9 @@ const AuthContext = createContext<AuthState>({
   deleteAccount: async () => {},
 });
 
-// Страницы, доступные до завершения онбординга (псевдоним + согласия
-// 152-ФЗ) — иначе пользователь не мог бы ни дойти до /onboarding, ни
-// прочитать документы, на которые там ссылаются, ни выйти.
+// Страницы, где напоминание о незавершённом онбординге не показываем: на
+// самом онбординге оно бессмысленно, на документах и страницах входа —
+// мешает читать то, ради чего человек туда пришёл.
 const ONBOARDING_EXEMPT_PREFIXES = ["/onboarding", "/legal", "/join", "/auth"];
 
 function isOnboardingExempt(pathname: string): boolean {
@@ -41,11 +42,26 @@ function isOnboardingExempt(pathname: string): boolean {
   );
 }
 
+/** Полоса-напоминание: онбординг не завершён, участие пока закрыто. */
+function OnboardingReminder() {
+  return (
+    <div
+      role="status"
+      className="bg-[color:var(--color-signal)]/12 px-4 py-2 text-center text-sm text-[color:var(--color-signal-deep)]"
+    >
+      Регистрация не завершена: примите условия и выберите псевдоним, чтобы
+      делать прогнозы.{" "}
+      <Link href="/onboarding" className="font-600 underline">
+        Завершить
+      </Link>
+    </div>
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<ApiMe | null>(null);
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const pathname = usePathname();
 
   const refresh = useCallback(async () => {
@@ -98,19 +114,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  // Страховочный гард: пока не пройден онбординг (псевдоним подтверждён +
-  // все обязательные согласия приняты), пускаем только на страницы из
-  // исключений — с любой другой мягко возвращаем на /onboarding.
-  useEffect(() => {
-    if (loading || !me?.needs_onboarding) return;
-    if (isOnboardingExempt(pathname ?? "")) return;
-    router.replace("/onboarding");
-  }, [loading, me, pathname, router]);
+  // Незавершённый онбординг НЕ уводит со страницы принудительно: раньше
+  // редирект срабатывал в том числе с публичного лендинга, и человек с живой
+  // сессией не мог открыть сайт вообще — «главная → /onboarding → главная».
+  // Витрина остаётся доступной, а участие всё равно закрыто на сервере
+  // (ConsentRequiredError → 403), поэтому обойти согласия так нельзя.
+  const showOnboardingReminder =
+    !loading && !!me?.needs_onboarding && !isOnboardingExempt(pathname ?? "");
 
   return (
     <AuthContext.Provider
       value={{ me, subscribed, loading, refresh, signOut, deleteAccount }}
     >
+      {showOnboardingReminder ? <OnboardingReminder /> : null}
       {children}
     </AuthContext.Provider>
   );
