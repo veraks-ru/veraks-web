@@ -19,7 +19,7 @@ type Phase = "edit" | "submitting" | "done";
 type SubmitError = "consent" | "generic";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
-  const { me } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const categoryTitle = useCategoryTitle(event.categorySlug);
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
   const [chosen, setChosen] = useState<number | null>(initial);
@@ -117,7 +117,10 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
 
         {/* Действие — гейт только по входу (участие бесплатно). */}
         <div className="mt-6">
-          {!me ? (
+          {/* Пока сессия проверяется, не утверждаем «войдите» — данные события
+              приходят раньше ответа /me, и вошедший на миг видел бы гейт гостя
+              (тот же приём, что и в app/events/propose/page.tsx). */}
+          {authLoading ? null : !me ? (
             <GatePanel
               title="Войдите, чтобы голосовать"
               note="Участвовать можно бесплатно. Войдите, чтобы сделать свой прогноз."

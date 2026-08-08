@@ -19,7 +19,7 @@ const DISPUTE_STATUS: Record<string, string> = {
 };
 
 export function Disputes({ event }: { event: PredictionEvent }) {
-  const { me } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const [disputes, setDisputes] = useState<ApiDispute[] | null>(null);
   const [reason, setReason] = useState("");
   const [evidence, setEvidence] = useState("");
@@ -90,7 +90,7 @@ export function Disputes({ event }: { event: PredictionEvent }) {
         </ul>
       )}
 
-      {!me ? (
+      {authLoading ? null : !me ? (
         <p className="text-sm text-slate">
           <Link href="/join" className="font-600 text-[color:var(--color-signal-deep)] hover:underline">
             Войдите

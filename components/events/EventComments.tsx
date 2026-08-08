@@ -9,7 +9,7 @@ import type { ApiComment } from "@/lib/api/dto";
 import { fmtDate } from "@/lib/format";
 
 export function EventComments({ eventId }: { eventId: string }) {
-  const { me } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const [comments, setComments] = useState<ApiComment[] | null>(null);
   const [body, setBody] = useState("");
   const act = useAction();
@@ -53,7 +53,7 @@ export function EventComments({ eventId }: { eventId: string }) {
         Обсуждение{comments ? ` · ${comments.length}` : ""}
       </p>
 
-      {me ? (
+      {authLoading ? null : me ? (
         <div className="mb-5">
           <textarea
             className={`${inputCls} min-h-[4.5rem]`}
