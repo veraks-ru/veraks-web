@@ -62,12 +62,16 @@ await context.route(
   },
 );
 
+const routes = process.argv[4] ? process.argv[4].split(",") : ["/events"];
 const page = await context.newPage();
 
-await page.goto(`${base}/events`, { waitUntil: "load" });
-await page.waitForTimeout(1200);
-await page.screenshot({ path: `${out}/authed-events.png` });
-console.log(`  /events (вошёл) → ${out}/authed-events.png`);
+for (const route of routes) {
+  const name = route.replace(/\W+/g, "_").replace(/^_|_$/g, "") || "root";
+  await page.goto(base + route, { waitUntil: "load" });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${out}/authed-${name}.png` });
+  console.log(`  ${route} (вошёл) → ${out}/authed-${name}.png`);
+}
 
 // Открываем лист «Ещё».
 const more = page.getByRole("button", { name: "Ещё" });
