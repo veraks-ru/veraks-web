@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
+import { useAuth } from "@/components/app/AuthProvider";
 
 const LINKS = [
   { href: "/admin", label: "Дашборд", exact: true },
@@ -21,9 +22,16 @@ const ADMIN_ONLY_LINKS = [
 
 export function AdminNav({ role, username }: { role: string; username?: string }) {
   const path = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuth();
   const links = role === "admin" ? [...LINKS, ...ADMIN_ONLY_LINKS] : LINKS;
   const isActive = (l: { href: string; exact?: boolean }) =>
     l.exact ? path === l.href : path.startsWith(l.href);
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/");
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md">
@@ -39,6 +47,13 @@ export function AdminNav({ role, username }: { role: string; username?: string }
           <Link href="/events" className="text-sm font-600 text-slate hover:text-graphite">
             В приложение →
           </Link>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite"
+          >
+            Выйти
+          </button>
         </div>
       </div>
       <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-3 pb-2 sm:px-8">
