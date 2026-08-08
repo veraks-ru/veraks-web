@@ -10,6 +10,7 @@ import type {
   ApiChainVerification,
   ApiDispute,
   ApiEvent,
+  ApiLeague,
   ApiPayout,
   ApiPrizeFund,
   ApiResolution,
@@ -68,6 +69,21 @@ export const createCategory = (body: {
   description?: string;
   parent_id?: string | null;
 }) => apiFetch<ApiCategory>("/categories", { method: "POST", body });
+
+/**
+ * Правка категории. Родителя менять нельзя (перевешивание узла дерева меняет
+ * смысл уже сделанных прогнозов); удаления нет — вместо него `is_restricted`,
+ * который закрывает создание новых событий, не трогая историю.
+ */
+export const updateCategory = (
+  id: string,
+  body: {
+    slug?: string;
+    title?: string;
+    description?: string;
+    is_restricted?: boolean;
+  },
+) => apiFetch<ApiCategory>(`/categories/${id}`, { method: "PATCH", body });
 
 /* ── Разрешение и споры (editor/arbiter/admin) ── */
 
@@ -162,6 +178,31 @@ export const applyPromotion = (body: {
   promote?: number;
   relegate?: number;
 }) => apiFetch<{ placed: number }>("/admin/divisions/apply", { method: "POST", body });
+
+/**
+ * Первичный посев дивизионов: для первого сезона брать расстановку неоткуда,
+ * `applyPromotion` требует завершённого предшественника. Берёт все активные
+ * аккаунты без дивизиона в сезоне; повтор безопасен без `overwrite`.
+ */
+export const seedDivisions = (body: {
+  season_id: string;
+  even_split?: boolean;
+  overwrite?: boolean;
+}) => apiFetch<{ placed: number }>("/admin/divisions/seed", { method: "POST", body });
+
+/* ── Модерация приватных лиг (admin) ── */
+
+export const listAllLeagues = (limit = 50, offset = 0) =>
+  apiFetch<{ items: ApiLeague[]; total: number }>(
+    `/admin/leagues?limit=${limit}&offset=${offset}`,
+    { allow: [403] },
+  );
+
+export const renameLeague = (id: string, name: string) =>
+  apiFetch<ApiLeague>(`/admin/leagues/${id}`, { method: "PATCH", body: { name } });
+
+export const deleteLeague = (id: string) =>
+  apiFetch<null>(`/admin/leagues/${id}`, { method: "DELETE" });
 
 export const updateSeason = (
   id: string,

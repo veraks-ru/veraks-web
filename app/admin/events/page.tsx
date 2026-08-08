@@ -10,6 +10,7 @@ import { invalidateCategoryCache, useCategoryList } from "@/lib/api/useCategorie
 import {
   createEvent,
   createCategory,
+  updateCategory,
   approveEvent,
   rejectEvent,
   type EventInput,
@@ -63,7 +64,7 @@ export default function AdminEventsPage() {
 
       <Moderation proposed={proposed} catTitle={catTitle} onDone={refresh} />
       <CreateEventForm cats={cats} seasons={seasons} onCreated={refresh} />
-      <CreateCategoryForm onCreated={refresh} />
+      <CategoriesPanel cats={cats} onChanged={refresh} />
 
       <Panel title="Все события" desc="Перейдите в событие, чтобы вести его и фиксировать исход">
         {!events ? (
@@ -319,8 +320,34 @@ function CreateEventForm({
   );
 }
 
-function CreateCategoryForm({ onCreated }: { onCreated: () => void }) {
+function CategoriesPanel({ cats, onChanged }: { cats: ApiCategory[]; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
+
+  return (
+    <Panel
+      title="Категории"
+      desc="Удаления нет: чтобы закрыть тему, отметьте её запрещённой — история прогнозов сохранится"
+      right={<Btn tone="ghost" onClick={() => setOpen((v) => !v)}>{open ? "Свернуть" : "Развернуть"}</Btn>}
+    >
+      {open && (
+        <div className="space-y-4">
+          <CreateCategoryForm onCreated={onChanged} />
+          {cats.length === 0 ? (
+            <p className="py-4 text-center text-sm text-slate">Категорий пока нет — создайте первую выше.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {cats.map((c) => (
+                <CategoryRow key={c.id} cat={c} onChanged={onChanged} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function CreateCategoryForm({ onCreated }: { onCreated: () => void }) {
   const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
   const act = useAction();
@@ -340,22 +367,100 @@ function CreateCategoryForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <Panel
-      title="Создать категорию"
-      right={<Btn tone="ghost" onClick={() => setOpen((v) => !v)}>{open ? "Свернуть" : "Развернуть"}</Btn>}
-    >
-      {open && (
+    <div className="rounded-xl bg-paper p-3.5">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-40">
+          <Field label="Slug"><input className={inputCls} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="finance" /></Field>
+        </div>
+        <div className="flex-1">
+          <Field label="Название"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Финансы" /></Field>
+        </div>
+        <Btn tone="primary" loading={act.loading} onClick={submit}>Создать</Btn>
+        <div className="w-full"><Notice error={act.error} ok={act.okMsg} /></div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryRow({ cat, onChanged }: { cat: ApiCategory; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [slug, setSlug] = useState(cat.slug);
+  const [title, setTitle] = useState(cat.title);
+  const act = useAction();
+
+  async function save() {
+    if (!slug.trim() || !title.trim()) {
+      act.setError("Slug и название обязательны");
+      return;
+    }
+    const r = await act.run(
+      () => updateCategory(cat.id, { slug: slug.trim(), title: title.trim() }),
+      "Категория обновлена",
+    );
+    if (r) {
+      setEditing(false);
+      invalidateCategoryCache();
+      onChanged();
+    }
+  }
+
+  async function toggleRestricted() {
+    const r = await act.run(
+      () => updateCategory(cat.id, { is_restricted: !cat.is_restricted }),
+      cat.is_restricted ? "Категория снова открыта" : "Категория закрыта для новых событий",
+    );
+    if (r) {
+      invalidateCategoryCache();
+      onChanged();
+    }
+  }
+
+  return (
+    <li className="py-3 first:pt-0 last:pb-0">
+      {editing ? (
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-40">
-            <Field label="Slug"><input className={inputCls} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="finance" /></Field>
+            <Field label="Slug"><input className={inputCls} value={slug} onChange={(e) => setSlug(e.target.value)} /></Field>
           </div>
           <div className="flex-1">
-            <Field label="Название"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Финансы" /></Field>
+            <Field label="Название"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
           </div>
-          <Btn tone="primary" loading={act.loading} onClick={submit}>Создать</Btn>
-          <div className="w-full"><Notice error={act.error} ok={act.okMsg} /></div>
+          <Btn tone="primary" loading={act.loading} onClick={save}>Сохранить</Btn>
+          <Btn
+            tone="ghost"
+            onClick={() => {
+              setSlug(cat.slug);
+              setTitle(cat.title);
+              setEditing(false);
+              act.setError(null);
+              act.setOkMsg(null);
+            }}
+          >
+            Отмена
+          </Btn>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-600">
+              {cat.title}
+              {cat.is_restricted && (
+                <span className="ml-2 rounded-full bg-paper px-2 py-0.5 text-xs font-600 text-slate">
+                  запрещённая тематика
+                </span>
+              )}
+            </p>
+            <p className="mt-0.5 font-mono text-xs text-slate">{cat.slug}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Btn tone="ghost" onClick={() => setEditing(true)}>Изменить</Btn>
+            <Btn tone="ghost" loading={act.loading} onClick={toggleRestricted}>
+              {cat.is_restricted ? "Снять запрет" : "Закрыть тему"}
+            </Btn>
+          </div>
         </div>
       )}
-    </Panel>
+      <Notice error={act.error} ok={act.okMsg} />
+    </li>
   );
 }

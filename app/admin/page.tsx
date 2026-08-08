@@ -68,6 +68,11 @@ export default function AdminDashboard() {
                 Открыть фонд →
               </Link>
             </Panel>
+            <Panel title="Лиги" desc="Модерация приватных лиг: переименование и удаление">
+              <Link href="/admin/leagues" className="text-sm font-700 text-[color:var(--color-signal-deep)] hover:underline">
+                Открыть лиги →
+              </Link>
+            </Panel>
             <Panel title="Пересчёт рейтингов" desc="Полный recompute всех срезов (admin)">
               <Btn
                 tone="primary"
