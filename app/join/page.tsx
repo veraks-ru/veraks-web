@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { useAuth } from "@/components/app/AuthProvider";
 import { API_BASE, ApiError } from "@/lib/api/client";
 import { getAuthProviders, requestEmailLink } from "@/lib/api/endpoints";
 import { EMAIL_RE } from "@/lib/validation";
@@ -24,6 +26,8 @@ type ProvidersState =
   | { status: "ready"; value: ApiAuthProviders };
 
 export default function JoinPage() {
+  const { me, loading } = useAuth();
+  const router = useRouter();
   const [providers, setProviders] = useState<ProvidersState>({ status: "loading" });
 
   useEffect(() => {
@@ -39,6 +43,22 @@ export default function JoinPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (loading || !me) return;
+    router.replace(me.needs_onboarding ? "/onboarding" : "/account");
+  }, [loading, me, router]);
+
+  // Пока сессия проверяется или уже известно, что человек вошёл (идёт
+  // редирект выше), форму входа не показываем — иначе вошедший на миг видит
+  // страницу входа, будто он гость.
+  if (loading || me) {
+    return (
+      <main className="bg-oracle grain flex min-h-dvh items-center justify-center text-white">
+        <Spinner className="size-8 text-signal" />
+      </main>
+    );
+  }
 
   return (
     <main className="bg-oracle grain flex min-h-dvh flex-col text-white">
