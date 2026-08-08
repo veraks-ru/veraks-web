@@ -20,12 +20,17 @@ export function LandingNav() {
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
       <Wordmark tone="dark" />
       <nav className="flex items-center gap-2 sm:gap-3">
-        <ButtonLink href="/events" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
-          Смотреть события
-        </ButtonLink>
-        <ButtonLink href="/pricing" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
-          Тарифы
-        </ButtonLink>
+        {/* Прячем контейнером, а не классом на самой кнопке: base-стиль
+            ButtonLink задаёт inline-flex, и при конфликте display выигрывает
+            он — на телефоне ссылки налезали на логотип и уезжали за экран. */}
+        <span className="hidden items-center gap-3 sm:flex">
+          <ButtonLink href="/events" variant="ghost-dark" size="md">
+            Смотреть события
+          </ButtonLink>
+          <ButtonLink href="/pricing" variant="ghost-dark" size="md">
+            Тарифы
+          </ButtonLink>
+        </span>
         {loading ? (
           <span aria-hidden className="invisible">
             <ButtonLink href="/join" variant="signal" size="md">
