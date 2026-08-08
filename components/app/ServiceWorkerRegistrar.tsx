@@ -17,10 +17,16 @@ export function ServiceWorkerRegistrar() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Была ли страница уже под управлением воркера. При ПЕРВОЙ установке
+    // controller пуст, и clients.claim() всё равно поднимет controllerchange —
+    // перезагружаться на нём нельзя: человек на первом же визите получил бы
+    // необъяснимый релоад. Перезагрузка уместна только при замене работавшего
+    // воркера на новую версию.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+
     let reloading = false;
     const onControllerChange = () => {
-      // Новый воркер взял управление — перезагружаем один раз.
-      if (reloading) return;
+      if (!hadController || reloading) return;
       reloading = true;
       location.reload();
     };

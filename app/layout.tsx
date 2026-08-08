@@ -81,6 +81,12 @@ export const metadata: Metadata = {
   },
   // Телефоны в текстах событий — это данные, а не кнопки «позвонить».
   formatDetection: { telephone: false },
+  other: {
+    // Next 15 отдаёт только стандартизованное `mobile-web-app-capable`, но
+    // Safari до iOS 17.4 понимает исключительно apple-префикс — без него
+    // ярлык с домашнего экрана откроется в браузере с адресной строкой.
+    "apple-mobile-web-app-capable": "yes",
+  },
   openGraph: {
     title: "Веракс — биржа репутации предсказателей",
     description: "Точность как публичный, накапливаемый трек-рекорд.",
