@@ -4,13 +4,15 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
+import { MyStandingCard } from "@/components/leaderboard/MyStandingCard";
 import { useAuth } from "@/components/app/AuthProvider";
 import type { LeaderboardRow, LeaderboardScope } from "@/lib/types";
-import type { ApiCategory, ApiSeason } from "@/lib/api/dto";
+import type { ApiCategory, ApiSeason, ApiSeasonStanding } from "@/lib/api/dto";
 import { SEASON_STATUS_LABEL } from "@/lib/format";
 import {
   getCategoryLeaderboard,
   getGlobalLeaderboard,
+  getMySeasonStanding,
   getSeasonLeaderboard,
   listCategories,
   listSeasons,
@@ -40,6 +42,9 @@ function LeaderboardsInner() {
   // Порог участия из меты ответа (см. ApiLeaderboard.min_resolved); null — для
   // сезона (своя многофакторная квалификация) или если фильтр не применялся.
   const [minResolved, setMinResolved] = useState<number | null>(null);
+  // Своя строка в сезоне — отдельным запросом: она нужна и тогда, когда позиция
+  // не попала на страницу лидерборда (после призового порядка это обычное дело).
+  const [standing, setStanding] = useState<ApiSeasonStanding | null>(null);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
 
@@ -89,6 +94,7 @@ function LeaderboardsInner() {
           meanBrier: Number(e.mean_brier),
           nResolved: e.n_resolved,
           isMe: !!me && refs[i]?.username === me.username,
+          qualified: e.qualified,
         }));
         if (alive) {
           setRows(out);
@@ -102,6 +108,24 @@ function LeaderboardsInner() {
       alive = false;
     };
   }, [scope, cat, reload, me, season]);
+
+  useEffect(() => {
+    if (scope !== "season" || !season || !me) {
+      setStanding(null);
+      return;
+    }
+    let alive = true;
+    getMySeasonStanding(season.slug)
+      .then((s) => {
+        if (alive) setStanding(s ?? null);
+      })
+      .catch(() => {
+        if (alive) setStanding(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [scope, season, me, reload]);
 
   const catTitle = useMemo(
     () => categories.find((c) => c.id === cat)?.title ?? "",
@@ -155,6 +179,13 @@ function LeaderboardsInner() {
           ) : (
             <>
               <LeaderboardTable rows={rows} />
+              {scope === "season" && (
+                <p className="mt-4 text-xs leading-relaxed text-slate">
+                  Порядок — призовые места: сверху участники, прошедшие пороги сезона
+                  (объём, разнообразие категорий, охват сложности). Приз получает первый
+                  в этом списке.
+                </p>
+              )}
               {minResolved !== null && (
                 <p className="mt-4 text-xs leading-relaxed text-slate">
                   В рейтинге участвуют прогнозисты с ≥{minResolved} разрешённых прогнозов
@@ -166,6 +197,12 @@ function LeaderboardsInner() {
                 участия и общий пул сезона смягчают это.
               </p>
             </>
+          )}
+
+          {/* Своя строка держится у нижней кромки, пока прокручивается таблица —
+              позиция ниже призовой зоны обычно вне первой страницы выдачи. */}
+          {!error && scope === "season" && standing && me && (
+            <MyStandingCard standing={standing} username={me.username} />
           )}
         </div>
       </main>

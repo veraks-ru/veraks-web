@@ -33,6 +33,7 @@ import type {
   ApiQualification,
   ApiResolution,
   ApiSeason,
+  ApiSeasonStanding,
   ApiSocialStats,
   ApiSponsorFundDetail,
   ApiSubscription,
@@ -351,6 +352,19 @@ export const getSeasonQualification = (userId: string, slug: string) =>
     `/users/${userId}/seasons/${slug}/qualification`,
     { allow: [404] },
   );
+
+/**
+ * Своя строка в сезоне (место + разбор порогов).
+ *
+ * 401 намеренно НЕ в ``allow``: иначе клиент не попробует тихо освежить сессию
+ * и после истечения access-токена строка «вы» молча пропала бы до перезагрузки.
+ * Вызывается только для залогиненного пользователя, а реальный 401 ловится
+ * вызывающим кодом и просто скрывает карточку.
+ */
+export const getMySeasonStanding = (slug: string) =>
+  apiFetch<ApiSeasonStanding>(`/leaderboards/seasons/${slug}/me`, {
+    allow: [404],
+  });
 
 export const getMyFollowers = () =>
   apiFetch<ApiUserRef[]>("/users/me/followers", { allow: [401] });

@@ -412,6 +412,16 @@ export interface ApiQualification {
   w_min: number;
 }
 
+/**
+ * Своя позиция в сезоне для закреплённой строки «вы»: место (если рейтинг уже
+ * есть) плюс пофакторный разбор порогов призового зачёта.
+ */
+export interface ApiSeasonStanding {
+  season_id: string;
+  rating: ApiRating | null;
+  qualification: ApiQualification;
+}
+
 export interface ApiPlan {
   plan: string;
   price_kopecks: number;

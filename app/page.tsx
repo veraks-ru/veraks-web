@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { OracleArc } from "@/components/brand/OracleArc";
 import { ButtonLink } from "@/components/ui/Button";
+import { LandingNav } from "@/components/landing/LandingNav";
 import { GRADES } from "@/lib/confidence";
 import { LEGAL_DOCS } from "@/lib/legal";
 
@@ -9,31 +10,12 @@ export default function HomePage() {
   return (
     <main className="bg-oracle min-h-dvh text-white">
       <div className="grain">
-        <SiteNav />
+        <LandingNav />
         <Hero />
         <Loop />
         <SiteFooter />
       </div>
     </main>
-  );
-}
-
-function SiteNav() {
-  return (
-    <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-      <Wordmark tone="dark" />
-      <nav className="flex items-center gap-2 sm:gap-3">
-        <ButtonLink href="/events" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
-          Смотреть события
-        </ButtonLink>
-        <ButtonLink href="/pricing" variant="ghost-dark" size="md" className="hidden sm:inline-flex">
-          Тарифы
-        </ButtonLink>
-        <ButtonLink href="/join" variant="signal" size="md">
-          Войти
-        </ButtonLink>
-      </nav>
-    </header>
   );
 }
 

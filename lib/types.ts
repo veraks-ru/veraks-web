@@ -102,4 +102,10 @@ export interface LeaderboardRow {
   meanBrier: number;
   nResolved: number;
   isMe?: boolean;
+  /**
+   * Квалификация к призам сезона: `true` — в призовом зачёте, `false` — вне
+   * него, `null` — область без квалификации (глобальный/категорийный зачёт).
+   * Бэкенд уже отдаёт строки в порядке призовых мест: квалифицированные выше.
+   */
+  qualified?: boolean | null;
 }
