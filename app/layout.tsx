@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/components/app/AuthProvider";
 import { AppChrome } from "@/components/app/AppChrome";
+import { AppleSplashLinks } from "@/components/app/AppleSplashLinks";
 
 // Самохостинг шрифтов (variable TTF, латиница + кириллица): сборка не ходит в
 // сеть за Google Fonts — образ собирается оффлайн (важно для CI/k8s).
@@ -122,6 +123,7 @@ export default function RootLayout({
       lang="ru"
       className={`${unbounded.variable} ${manrope.variable} ${jetbrains.variable}`}
     >
+      <AppleSplashLinks />
       <body>
         <AuthProvider>
           <AppChrome>{children}</AppChrome>

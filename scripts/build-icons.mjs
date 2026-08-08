@@ -31,7 +31,7 @@ const SIGNAL = "#46e0c4";
  * @param {number} inset доля поля, свободная по краям (safe zone для maskable)
  * @param {boolean} bleed заливать фон до краёв (maskable) или скруглённым квадратом
  */
-function svg(size, inset, bleed) {
+function svg(size, inset, bleed, noBg = false) {
   const S = size;
   // Геометрия дуги в координатах иконки: центр внизу, радиус — с учётом inset.
   const cx = S / 2;
@@ -56,9 +56,13 @@ function svg(size, inset, bleed) {
     })
     .join("");
 
-  const bg = bleed
-    ? `<rect width="${S}" height="${S}" fill="url(#bg)"/>`
-    : `<rect width="${S}" height="${S}" rx="${(S * 0.22).toFixed(2)}" fill="url(#bg)"/>`;
+  // noBg — глиф без подложки: нужен для сплэша, где фон рисует холст целиком,
+  // иначе на стыке виден прямоугольник с чуть другим градиентом.
+  const bg = noBg
+    ? ""
+    : bleed
+      ? `<rect width="${S}" height="${S}" fill="url(#bg)"/>`
+      : `<rect width="${S}" height="${S}" rx="${(S * 0.22).toFixed(2)}" fill="url(#bg)"/>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">
   <defs>
@@ -107,3 +111,49 @@ for (const [name, size, inset, bleed] of TARGETS) {
 // Векторная иконка — для десктопных браузеров и как источник правды.
 await writeFile(path.join(OUT, "icon.svg"), svg(512, 0.2, false), "utf8");
 console.log("  icon.svg  512×512");
+
+/**
+ * Экраны запуска для iOS.
+ *
+ * Android рисует сплэш сам из `background_color` и иконки манифеста, а iOS
+ * этого не умеет: без `apple-touch-startup-image` запуск с ярлыка встречает
+ * белой вспышкой — самый заметный признак «это сайт». Медиа-запрос должен
+ * точно совпасть с устройством, иначе iOS не возьмёт ни одну картинку, так
+ * что перечисляем реальные размеры, а не «примерно подходящие».
+ */
+
+const DEVICES = [
+  // [css-ширина, css-высота, dpr, что за устройства]
+  [393, 852, 3, "iPhone 16/15/14 Pro"],
+  [430, 932, 3, "iPhone 16 Plus/15 Pro Max/14 Pro Max"],
+  [390, 844, 3, "iPhone 14/13/12"],
+  [428, 926, 3, "iPhone 14 Plus/13 Pro Max"],
+  [375, 812, 3, "iPhone 13 mini/12 mini/11 Pro/X"],
+  [414, 896, 2, "iPhone 11/XR"],
+  [375, 667, 2, "iPhone SE"],
+];
+
+for (const [cw, ch, dpr, label] of DEVICES) {
+  const w = cw * dpr;
+  const h = ch * dpr;
+  const size = Math.round(Math.min(w, h) * 0.42);
+  const glyph = svg(size, 0.06, true, true);
+  const canvas = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${INK}"/><stop offset="100%" stop-color="${INK_3}"/>
+  </linearGradient></defs>
+  <rect width="${w}" height="${h}" fill="url(#bg)"/>
+</svg>`;
+  const name = `splash-${cw}x${ch}@${dpr}x.png`;
+  await sharp(Buffer.from(canvas))
+    .composite([
+      {
+        input: await sharp(Buffer.from(glyph)).resize(size, size).png().toBuffer(),
+        top: Math.round((h - size) / 2),
+        left: Math.round((w - size) / 2),
+      },
+    ])
+    .png()
+    .toFile(path.join(OUT, name));
+  console.log(`  ${name}  ${w}×${h}  (${label})`);
+}
