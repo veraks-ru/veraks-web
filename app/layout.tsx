@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/components/app/AuthProvider";
+import { AppChrome } from "@/components/app/AppChrome";
 
 // Самохостинг шрифтов (variable TTF, латиница + кириллица): сборка не ходит в
 // сеть за Google Fonts — образ собирается оффлайн (важно для CI/k8s).
@@ -62,11 +63,47 @@ export const metadata: Metadata = {
   title: "Веракс — биржа репутации предсказателей",
   description:
     "Прогнозируйте исходы реальных событий, накапливайте измеримый публичный трек-рекорд точности и соревнуйтесь в лидербордах.",
+  applicationName: "Веракс",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Веракс",
+    // Прозрачная строка состояния: контент уходит под неё, а фон даёт сама
+    // страница — тёмный на онбординге, светлый в ленте.
+    statusBarStyle: "black-translucent",
+  },
+  // Телефоны в текстах событий — это данные, а не кнопки «позвонить».
+  formatDetection: { telephone: false },
   openGraph: {
     title: "Веракс — биржа репутации предсказателей",
     description: "Точность как публичный, накапливаемый трек-рекорд.",
     type: "website",
   },
+};
+
+/**
+ * ``viewportFit: "cover"`` обязателен, иначе ``env(safe-area-inset-*)`` всегда
+ * ноль и нижняя навигация налезает на индикатор «домой» у iPhone.
+ *
+ * Масштабирование НЕ запрещаем: `maximum-scale=1` ломает доступность для тех,
+ * кто увеличивает текст. Зум при фокусе в поле лечится размером шрифта (16px),
+ * а не запретом — см. globals.css.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f7fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1430" },
+  ],
 };
 
 export default function RootLayout({
@@ -80,7 +117,9 @@ export default function RootLayout({
       className={`${unbounded.variable} ${manrope.variable} ${jetbrains.variable}`}
     >
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AppChrome>{children}</AppChrome>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -14,7 +14,14 @@ const LINKS = [
   { href: "/pricing", label: "Тарифы" },
 ];
 
-/** Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел. */
+/**
+ * Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел.
+ *
+ * На мобильном шапка однорядная: вся навигация ушла в нижнюю панель
+ * (``BottomNav``), до которой достаёт большой палец. Здесь остаются только
+ * логотип, колокольчик уведомлений и вход — всё остальное дублировало бы
+ * панель и съедало высоту экрана.
+ */
 export function TopNav({ active }: { active?: string }) {
   const { me, loading, signOut } = useAuth();
   const router = useRouter();
@@ -65,51 +72,37 @@ export function TopNav({ active }: { active?: string }) {
                 Админка
               </Link>
             )}
+            {/* Кабинет и выход на мобильном живут в нижней панели. */}
             <Link
               href="/account"
-              className="flex items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper"
+              className="hidden items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper md:flex"
               aria-label="Мой кабинет"
             >
-            <span className="flex size-8 items-center justify-center rounded-full bg-graphite text-sm font-700 text-white">
-              {(me.display_name || me.username)[0]?.toUpperCase()}
-            </span>
-              <span className="hidden text-sm font-600 sm:inline">@{me.username}</span>
+              <span className="flex size-8 items-center justify-center rounded-full bg-graphite text-sm font-700 text-white">
+                {(me.display_name || me.username)[0]?.toUpperCase()}
+              </span>
+              <span className="text-sm font-600">@{me.username}</span>
             </Link>
             <button
               type="button"
               onClick={handleSignOut}
-              className="rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite"
+              className="hidden rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite md:inline"
             >
               Выйти
             </button>
           </div>
         ) : (
+          // На мобильном «Войти» — отдельная вкладка внизу; вторая такая же
+          // кнопка в шапке была бы дублем в одном экране.
           <Link
             href="/join"
-            className="rounded-full bg-signal px-4 py-2 text-sm font-700 text-ink-3 hover:bg-[color:var(--color-signal-deep)] hover:text-white"
+            className="hidden rounded-full bg-signal px-4 py-2 text-sm font-700 text-ink-3 hover:bg-[color:var(--color-signal-deep)] hover:text-white md:inline-block"
           >
             Войти
           </Link>
         )}
       </div>
 
-      <nav className="flex items-center gap-1 overflow-x-auto border-t border-line px-3 py-2 md:hidden">
-        {links.map((l) => {
-          const on = active === l.href;
-          return (
-            <Link
-              key={l.href}
-              href={l.href}
-              aria-current={on ? "page" : undefined}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-center text-sm font-600 ${
-                on ? "bg-paper text-graphite" : "text-slate"
-              }`}
-            >
-              {l.label}
-            </Link>
-          );
-        })}
-      </nav>
     </header>
   );
 }

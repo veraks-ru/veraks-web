@@ -65,6 +65,47 @@
     background: color-mix(in srgb, var(--color-signal) 32%, transparent);
     color: var(--color-graphite);
   }
+
+  /* ── Мобильное приложение ──────────────────────────────────────────
+     Установленный на домашний экран Веракс должен вести себя как
+     приложение, а не как страница в браузере. */
+
+  body {
+    /* Тянущийся «резиновый» скролл за границами и системный pull-to-refresh
+       выдают веб-страницу; внутри standalone они ещё и конфликтуют с
+       собственными жестами. */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Серый прямоугольник по тапу — самый узнаваемый признак «это сайт».
+     Убираем его, но взамен обязаны дать своё :active-состояние. */
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a:active,
+  button:active,
+  [role="button"]:active {
+    /* Отклик на касание там, где нет hover: палец не наводится, он нажимает. */
+    opacity: 0.72;
+  }
+
+  /* iOS Safari увеличивает страницу при фокусе в поле со шрифтом мельче 16px
+     и обратно уже не отъезжает. Лечим размером, а не user-scalable=no:
+     запрет масштабирования ломает доступность. На десктопе поля возвращаются
+     к компактным 14px. */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
   :focus-visible {
     outline: 2px solid var(--color-signal);
     outline-offset: 2px;
@@ -83,6 +124,45 @@
 }
 
 @layer utilities {
+  /* Запас под вырез и индикатор «домой». Ноль в обычном браузере, поэтому
+     утилиту можно вешать безусловно. Работает только при
+     viewport-fit=cover — он задан в app/layout.tsx. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Лента фильтров: на телефоне чипы едут вбок одной строкой, а не переносятся
+     в три ряда, съедая экран до первого события. С sm возвращается обычный
+     перенос — на широком экране горизонтальный скролл только мешает.
+     Края «вытекают» под паддинг страницы (px-5), чтобы лента шла от кромки до
+     кромки и было видно, что её можно листать. */
+  .filter-strip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -1.25rem;
+    padding-inline: 1.25rem;
+    scroll-padding-inline: 1.25rem;
+  }
+  .filter-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .filter-strip > * {
+    flex: none;
+  }
+  @media (min-width: 640px) {
+    .filter-strip {
+      flex-wrap: wrap;
+      overflow-x: visible;
+      margin-inline: 0;
+      padding-inline: 0;
+    }
+  }
+
   .tnum {
     font-variant-numeric: tabular-nums;
   }

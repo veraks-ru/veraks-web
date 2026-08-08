@@ -196,13 +196,13 @@ function Filters(props: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр событий">
+        <div className="filter-strip w-full sm:w-auto" role="group" aria-label="Фильтр событий">
           {statuses.map((s) => (
             <Pill key={s.k} on={props.status === s.k} onClick={() => props.setStatus(s.k)}>
               {s.label}
             </Pill>
           ))}
-          <label className="ml-1 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-3.5 py-2 text-sm font-600 text-slate has-checked:border-graphite has-checked:text-graphite">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-3.5 py-2 text-sm font-600 whitespace-nowrap text-slate has-checked:border-graphite has-checked:text-graphite">
             <input
               type="checkbox"
               checked={props.onlyMine}
@@ -234,7 +234,7 @@ function Filters(props: {
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Категория">
+      <div className="filter-strip" role="group" aria-label="Категория">
         <Pill on={props.cat === "all"} onClick={() => props.setCat("all")}>
           Все категории
         </Pill>
@@ -262,7 +262,8 @@ function Pill({
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`rounded-full px-3.5 py-2 text-sm font-600 transition-colors ${
+      // min-h-10 — палец должен попадать по чипу, не целясь.
+      className={`min-h-10 rounded-full px-3.5 py-2 text-sm font-600 whitespace-nowrap transition-colors ${
         on
           ? "bg-graphite text-white"
           : "border border-line bg-surface text-slate hover:text-graphite"

@@ -25,5 +25,8 @@ ENV PORT=3000
 ENV SITE_URL=http://localhost:3000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# standalone НЕ включает public/ — без этой строки манифест, service worker и
+# иконки приложения отдают 404, и PWA молча не устанавливается.
+COPY --from=build /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]
