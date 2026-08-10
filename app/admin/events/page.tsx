@@ -63,8 +63,8 @@ export default function AdminEventsPage() {
       </div>
 
       <Moderation proposed={proposed} catTitle={catTitle} onDone={refresh} />
-      <CreateEventForm cats={cats} seasons={seasons} onCreated={refresh} />
       <CategoriesPanel cats={cats} onChanged={refresh} />
+      <CreateEventForm cats={cats} seasons={seasons} onCreated={refresh} />
 
       <Panel title="Все события" desc="Перейдите в событие, чтобы вести его и фиксировать исход">
         {!events ? (
@@ -255,7 +255,13 @@ function CreateEventForm({
         </Btn>
       }
     >
-      {open && (
+      {open && cats.length === 0 && (
+        <p className="rounded-xl bg-paper p-4 text-sm text-slate">
+          Сначала заведите категорию — без неё событие создать нельзя. Блок
+          «Категории» выше.
+        </p>
+      )}
+      {open && cats.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Field label="Формулировка исхода ДА">
@@ -321,7 +327,16 @@ function CreateEventForm({
 }
 
 function CategoriesPanel({ cats, onChanged }: { cats: ApiCategory[]; onChanged: () => void }) {
-  const [open, setOpen] = useState(false);
+  // Пока категорий нет, панель раскрыта: без категории не создать ни одного
+  // события, и прятать этот шаг за «Развернуть» — значит прятать старт работы.
+  const [open, setOpen] = useState(cats.length === 0);
+  useEffect(() => {
+    // Категории приезжают асинхронно: на первом рендере список ещё пуст, и
+    // решение «раскрыть» нужно принять повторно, когда он загрузился.
+    // Схлопывать панель после появления категорий не нужно — человек в этот
+    // момент как раз в ней работает.
+    if (cats.length === 0) setOpen(true);
+  }, [cats.length]);
 
   return (
     <Panel

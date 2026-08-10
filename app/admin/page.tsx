@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<ApiEvent[] | null>(null);
   const [cats, setCats] = useState(0);
   const [seasons, setSeasons] = useState(0);
+  const [activeSeason, setActiveSeason] = useState(0);
   const recompute = useAction();
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
         setEvents(e ?? []);
         setCats((c ?? []).length);
         setSeasons((s?.items ?? []).length);
+        setActiveSeason((s?.items ?? []).filter((x) => x.status === "active").length);
       })
       .catch(() => setEvents([]));
   }, []);
@@ -43,6 +45,12 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <>
+          <GettingStarted
+            cats={cats}
+            events={events.length}
+            seasons={seasons}
+            activeSeason={activeSeason}
+          />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Stat n={events.length} label="событий" />
             <Stat n={by("draft")} label="черновики" />
@@ -96,6 +104,103 @@ export default function AdminDashboard() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Порядок запуска платформы, пока он не пройден.
+ *
+ * Шаги связаны жёстко, и это не очевидно из разрозненных страниц: без
+ * категорий не создать событие (категория обязательна), без активного сезона
+ * события не попадут в зачёт, а пороги квалификации фиксируются НАВСЕГДА в
+ * момент активации. Человек, зашедший в пустую админку, иначе узнаёт об этом
+ * методом проб.
+ *
+ * Блок исчезает сам, когда все шаги сделаны, — постоянного места на дашборде
+ * он не занимает.
+ */
+function GettingStarted({
+  cats,
+  events,
+  seasons,
+  activeSeason,
+}: {
+  cats: number;
+  events: number;
+  seasons: number;
+  activeSeason: number;
+}) {
+  const steps = [
+    {
+      done: cats > 0,
+      title: "Завести категории",
+      body: "Событие нельзя создать без категории. Их же считает порог «разнообразие категорий» — заведите минимум столько, сколько поставите в правилах сезона.",
+      href: "/admin/events",
+      cta: "К категориям",
+    },
+    {
+      done: seasons > 0,
+      title: "Создать сезон",
+      body: "Соревновательный период. События попадают в зачёт, если разрешаются внутри его окна.",
+      href: "/admin/seasons",
+      cta: "К сезонам",
+    },
+    {
+      done: activeSeason > 0,
+      title: "Активировать сезон",
+      body: "В этот момент пороги квалификации замораживаются навсегда (ст. 1058 ГК). Ставьте их по ожидаемой активности: при завышенных к призам не пройдёт никто.",
+      href: "/admin/seasons",
+      cta: "К активации",
+    },
+    {
+      done: events > 0,
+      title: "Создать и опубликовать события",
+      body: "Черновик → «Опубликовать» открывает приём прогнозов. Дальше: закрыть приём, зафиксировать исход, посчитать.",
+      href: "/admin/events",
+      cta: "К событиям",
+    },
+  ];
+
+  const left = steps.filter((s) => !s.done).length;
+  if (left === 0) return null;
+
+  return (
+    <Panel
+      title="С чего начать"
+      desc={`Осталось шагов: ${left} из ${steps.length}. Блок исчезнет, когда всё будет сделано`}
+    >
+      <ol className="space-y-2.5">
+        {steps.map((s, i) => (
+          <li
+            key={s.title}
+            className={`flex gap-3 rounded-xl p-3 ${s.done ? "opacity-55" : "bg-paper"}`}
+          >
+            <span
+              aria-hidden
+              className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-700 ${
+                s.done
+                  ? "bg-[color:var(--color-signal-deep)] text-white"
+                  : "border border-line bg-surface text-slate"
+              }`}
+            >
+              {s.done ? "✓" : i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-700">{s.title}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate">{s.body}</p>
+              {!s.done && (
+                <Link
+                  href={s.href}
+                  className="mt-1.5 inline-block text-xs font-700 text-[color:var(--color-signal-deep)] hover:underline"
+                >
+                  {s.cta} →
+                </Link>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Panel>
   );
 }
 

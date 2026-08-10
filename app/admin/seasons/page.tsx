@@ -73,12 +73,6 @@ export default function AdminSeasonsPage() {
       <h1 className="font-display text-2xl font-600 sm:text-3xl">Сезоны</h1>
 
       <CreateSeasonForm onCreated={refresh} />
-      {isAdmin && seasons && seasons.length > 0 && (
-        <>
-          <DivisionsSeedPanel seasons={seasons} />
-          <DivisionsApplyPanel seasons={seasons} />
-        </>
-      )}
 
       <Panel title="Все сезоны" desc="Активация и финализация — роль admin">
         {!seasons ? (
@@ -91,7 +85,35 @@ export default function AdminSeasonsPage() {
           </ul>
         )}
       </Panel>
+
+      {/* Дивизионы — редкая операция раз в сезон и вообще пост-MVP. Раньше две
+          их панели стояли над списком сезонов и заслоняли то, ради чего сюда
+          заходят: создать и активировать сезон. */}
+      {isAdmin && seasons && seasons.length > 0 && <DivisionsSection seasons={seasons} />}
     </div>
+  );
+}
+
+function DivisionsSection({ seasons }: { seasons: ApiSeason[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Panel
+      title="Дивизионы"
+      desc="Лестница уровней: нужна, когда сезонов уже несколько. Для первого сезона можно не трогать"
+      right={
+        <Btn tone="ghost" onClick={() => setOpen((v) => !v)}>
+          {open ? "Свернуть" : "Развернуть"}
+        </Btn>
+      }
+    >
+      {open && (
+        <div className="space-y-4">
+          <DivisionsSeedPanel seasons={seasons} />
+          <DivisionsApplyPanel seasons={seasons} />
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -111,10 +133,11 @@ function DivisionsSeedPanel({ seasons }: { seasons: ApiSeason[] }) {
   const act = useAction();
 
   return (
-    <Panel
-      title="Первичный посев дивизионов"
-      desc="Для первого сезона: у него нет предшественника, из которого можно взять расстановку"
-    >
+    <div className="rounded-xl bg-paper p-4">
+      <p className="text-sm font-700">Первичный посев</p>
+      <p className="mt-0.5 mb-3 text-xs text-slate">
+        Разложить участников по уровням, когда предыдущего сезона ещё нет
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Сезон">
           <select className={inputCls} value={season} onChange={(e) => setSeason(e.target.value)}>
@@ -167,7 +190,7 @@ function DivisionsSeedPanel({ seasons }: { seasons: ApiSeason[] }) {
           <Notice error={act.error} ok={act.okMsg} />
         </div>
       </div>
-    </Panel>
+    </div>
   );
 }
 
@@ -181,10 +204,11 @@ function DivisionsApplyPanel({ seasons }: { seasons: ApiSeason[] }) {
   const act = useAction();
 
   return (
-    <Panel
-      title="Разнести дивизионы"
-      desc="Повышение/понижение по итогам сезона (авто при активации; здесь — вручную)"
-    >
+    <div className="rounded-xl bg-paper p-4">
+      <p className="text-sm font-700">Повышение и понижение</p>
+      <p className="mt-0.5 mb-3 text-xs text-slate">
+        По итогам завершённого сезона: топ поднимается уровнем выше, низ опускается
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Из завершённого сезона">
           <select className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)}>
@@ -220,7 +244,7 @@ function DivisionsApplyPanel({ seasons }: { seasons: ApiSeason[] }) {
           <Notice error={act.error} ok={act.okMsg} />
         </div>
       </div>
-    </Panel>
+    </div>
   );
 }
 
