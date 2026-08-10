@@ -9,6 +9,7 @@ import { listSeasons } from "@/lib/api/endpoints";
 import {
   createSeason,
   activateSeason,
+  repairSeasonRules,
   finalizeSeason,
   updateSeason,
   applyPromotion,
@@ -289,10 +290,14 @@ function SeasonRow({ s, isAdmin, onDone }: { s: ApiSeason; isAdmin: boolean; onD
           )}
           <Btn
             tone="primary"
-            disabled={!isAdmin || s.status !== "upcoming"}
+            disabled={!isAdmin || (s.status !== "upcoming" && s.status !== "active")}
             onClick={() => setActivating((v) => !v)}
           >
-            {activating ? "Свернуть" : "Активировать"}
+            {activating
+              ? "Свернуть"
+              : s.status === "active"
+                ? "Изменить правила"
+                : "Активировать"}
           </Btn>
           <Btn tone="danger" disabled={!isAdmin || s.status !== "active"} loading={act.loading} onClick={finalize}>
             Финализировать
@@ -301,8 +306,12 @@ function SeasonRow({ s, isAdmin, onDone }: { s: ApiSeason; isAdmin: boolean; onD
       </div>
 
       {editing && <EditSeasonForm s={s} onSaved={() => { setEditing(false); onDone(); }} />}
-      {activating && s.status === "upcoming" && (
-        <ActivateSeasonForm s={s} onActivated={() => { setActivating(false); onDone(); }} />
+      {activating && (s.status === "upcoming" || s.status === "active") && (
+        <ActivateSeasonForm
+          s={s}
+          mode={s.status === "active" ? "repair" : "activate"}
+          onActivated={() => { setActivating(false); onDone(); }}
+        />
       )}
       {recal !== undefined && (
         <div className="mt-3 rounded-lg border border-line bg-paper p-3">
@@ -340,16 +349,31 @@ function SeasonRow({ s, isAdmin, onDone }: { s: ApiSeason; isAdmin: boolean; onD
 }
 
 /**
- * Форма активации сезона: пороги задаются явно и замораживаются НАВСЕГДА.
+ * Пороги сезона: при активации задаются впервые, в режиме `repair` —
+ * исправляются у уже активного сезона.
  *
- * По ст. 1058 ГК условия публичного конкурса нельзя менять после объявления,
- * поэтому это единственный момент, когда значения ещё редактируемы. Раньше
- * здесь молча уходил демо-конфиг — на боевом сезоне это означало бы
- * неисправимо заниженные пороги.
+ * По ст. 1058 ГК условия публичного конкурса неизменны, поэтому активация —
+ * единственный штатный момент выбора. Но сезон может активироваться сам:
+ * воркер поднимает `upcoming` с наступившим `starts_at` и замораживает
+ * дефолты, так что сезон с датой старта в прошлом стартует раньше, чем
+ * пороги успевают выбрать. Пока по сезону нет ни одного прогноза, полагаться
+ * на условия некому — правка допустима; первый прогноз её запирает (409).
  */
-function ActivateSeasonForm({ s, onActivated }: { s: ApiSeason; onActivated: () => void }) {
-  const [cfg, setCfg] = useState<LeagueConfigInput>(PROD_DEFAULTS);
-  const [grid, setGrid] = useState(PROD_DEFAULTS.gradation_map.join(", "));
+function ActivateSeasonForm({
+  s,
+  mode = "activate",
+  onActivated,
+}: {
+  s: ApiSeason;
+  mode?: "activate" | "repair";
+  onActivated: () => void;
+}) {
+  const repair = mode === "repair";
+  // При правке отталкиваемся от того, что уже заморожено, а не от дефолтов:
+  // человек чинит конкретные значения, а не заполняет форму заново.
+  const initial = (repair && s.league_config) || PROD_DEFAULTS;
+  const [cfg, setCfg] = useState<LeagueConfigInput>(initial);
+  const [grid, setGrid] = useState(initial.gradation_map.join(", "));
   const [confirming, setConfirming] = useState(false);
   const act = useAction();
 
@@ -392,8 +416,11 @@ function ActivateSeasonForm({ s, onActivated }: { s: ApiSeason; onActivated: () 
       return;
     }
     const r = await act.run(
-      () => activateSeason(s.id, { ...cfg, gradation_map }),
-      "Сезон активирован, правила опубликованы",
+      () =>
+        repair
+          ? repairSeasonRules(s.id, { ...cfg, gradation_map })
+          : activateSeason(s.id, { ...cfg, gradation_map }),
+      repair ? "Правила сезона исправлены" : "Сезон активирован, правила опубликованы",
     );
     if (r) onActivated();
   }
@@ -401,16 +428,29 @@ function ActivateSeasonForm({ s, onActivated }: { s: ApiSeason; onActivated: () 
   return (
     <div className="mt-3 rounded-lg border border-line bg-paper p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-600">Правила сезона на момент активации</p>
+        <p className="text-sm font-600">
+          {repair ? "Правила активного сезона" : "Правила сезона на момент активации"}
+        </p>
         <div className="flex gap-2">
           <Btn tone="ghost" onClick={() => applyPreset(PROD_DEFAULTS)}>Боевые</Btn>
           <Btn tone="ghost" onClick={() => applyPreset(DEMO_LEAGUE)}>Демо</Btn>
         </div>
       </div>
       <p className="mt-1 text-xs leading-relaxed text-slate">
-        После активации эти значения <span className="font-600">нельзя изменить</span>: условия
-        публичного конкурса фиксируются заранее (ст. 1058 ГК). Проверьте пороги по фактической
-        активности — при слишком высоком объёме к призам не квалифицируется никто.
+        {repair ? (
+          <>
+            Сезон уже активен, но прогнозов по нему ещё нет — пороги можно
+            исправить. С первым же прогнозом они запираются навсегда: условия
+            публичного конкурса неизменны (ст. 1058 ГК).
+          </>
+        ) : (
+          <>
+            После активации эти значения <span className="font-600">нельзя изменить</span>:
+            условия публичного конкурса фиксируются заранее (ст. 1058 ГК). Проверьте пороги
+            по фактической активности — при слишком высоком объёме к призам не
+            квалифицируется никто.
+          </>
+        )}
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -438,12 +478,20 @@ function ActivateSeasonForm({ s, onActivated }: { s: ApiSeason; onActivated: () 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {confirming ? (
           <>
-            <span className="text-sm font-600">Активировать «{s.title}» с этими правилами?</span>
-            <Btn tone="primary" loading={act.loading} onClick={submit}>Да, активировать</Btn>
+            <span className="text-sm font-600">
+              {repair
+                ? `Заменить правила «${s.title}»?`
+                : `Активировать «${s.title}» с этими правилами?`}
+            </span>
+            <Btn tone="primary" loading={act.loading} onClick={submit}>
+              {repair ? "Да, заменить" : "Да, активировать"}
+            </Btn>
             <Btn tone="ghost" onClick={() => setConfirming(false)}>Отмена</Btn>
           </>
         ) : (
-          <Btn tone="primary" onClick={() => setConfirming(true)}>Активировать сезон</Btn>
+          <Btn tone="primary" onClick={() => setConfirming(true)}>
+            {repair ? "Исправить правила" : "Активировать сезон"}
+          </Btn>
         )}
       </div>
       <Notice error={act.error} ok={act.okMsg} />

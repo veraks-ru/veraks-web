@@ -122,6 +122,18 @@ export const createSeason = (body: {
   ends_at: string;
 }) => apiFetch<ApiSeason>("/admin/seasons", { method: "POST", body });
 
+/**
+ * Исправление правил уже активного сезона. Работает, только пока по сезону нет
+ * ни одного прогноза (иначе 409): условия объявленного конкурса неизменны.
+ * Нужно из-за автоактивации воркером — сезон с датой старта в прошлом
+ * замораживает дефолтные пороги раньше, чем их успевают выбрать.
+ */
+export const repairSeasonRules = (id: string, league_config: LeagueConfigInput) =>
+  apiFetch<ApiSeason>(`/admin/seasons/${id}/rules`, {
+    method: "PATCH",
+    body: { league_config },
+  });
+
 export const activateSeason = (id: string, league_config?: LeagueConfigInput | null) =>
   apiFetch<ApiSeason>(`/admin/seasons/${id}/activate`, {
     method: "POST",
