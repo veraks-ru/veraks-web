@@ -120,6 +120,12 @@ export const createSeason = (body: {
   title: string;
   starts_at: string;
   ends_at: string;
+  /**
+   * Пороги, которые заморозит активация — включая автоматическую, по
+   * наступлению даты начала. Без них сезон стартует с боевыми дефолтами, и
+   * поменять их будет уже нельзя.
+   */
+  planned_league_config?: LeagueConfigInput;
 }) => apiFetch<ApiSeason>("/admin/seasons", { method: "POST", body });
 
 /**

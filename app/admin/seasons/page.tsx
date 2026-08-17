@@ -541,14 +541,26 @@ function CreateSeasonForm({ onCreated }: { onCreated: () => void }) {
   const [title, setTitle] = useState("");
   const [starts, setStarts] = useState(toLocal(now));
   const [ends, setEnds] = useState(toLocal(new Date(+now + 90 * 86_400_000)));
+  // Пороги задаются здесь, а не при активации: сезон, у которого наступил
+  // starts_at, поднимает воркер, и без заранее выбранных значений он заморозит
+  // боевые дефолты — переиграть их будет уже нельзя.
+  const [cfg, setCfg] = useState<LeagueConfigInput>(PROD_DEFAULTS);
   const act = useAction();
+
+  const setNum = (k: keyof Omit<LeagueConfigInput, "gradation_map">, raw: string) =>
+    setCfg((p) => ({ ...p, [k]: raw === "" ? 0 : Number(raw) }));
 
   async function submit() {
     if (!slug.trim() || !title.trim()) { act.setError("Slug и название обязательны"); return; }
+    if (cfg.min_predictors < 2) {
+      act.setError("Прогнозистов на событие должно быть ≥ 2 (нужно для LOO-консенсуса)");
+      return;
+    }
     const r = await act.run(
       () => createSeason({
         slug: slug.trim(), title: title.trim(),
         starts_at: new Date(starts).toISOString(), ends_at: new Date(ends).toISOString(),
+        planned_league_config: cfg,
       }),
       "Сезон создан (upcoming)",
     );
@@ -563,6 +575,37 @@ function CreateSeasonForm({ onCreated }: { onCreated: () => void }) {
           <Field label="Название"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Сезон 2026 · III квартал" /></Field>
           <Field label="Начало"><input type="datetime-local" className={inputCls} value={starts} onChange={(e) => setStarts(e.target.value)} /></Field>
           <Field label="Конец"><input type="datetime-local" className={inputCls} value={ends} onChange={(e) => setEnds(e.target.value)} /></Field>
+
+          <div className="sm:col-span-2 rounded-xl bg-paper p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-700">Пороги квалификации</p>
+              <div className="flex gap-2">
+                <Btn tone="ghost" onClick={() => setCfg(PROD_DEFAULTS)}>Боевые</Btn>
+                <Btn tone="ghost" onClick={() => setCfg(DEMO_LEAGUE)}>Демо</Btn>
+              </div>
+            </div>
+            <p className="mt-1 mb-3 text-xs leading-relaxed text-slate">
+              Замораживаются в момент активации — в том числе автоматической, когда
+              наступит дата начала. Задать их потом будет нельзя, поэтому выбирайте
+              сейчас: при завышенных порогах к призам не пройдёт никто.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {RULE_FIELDS.map((f) => (
+                <Field key={f.key} label={f.label}>
+                  <input
+                    type="number"
+                    step={f.step}
+                    min={f.min}
+                    className={inputCls}
+                    value={cfg[f.key]}
+                    onChange={(e) => setNum(f.key, e.target.value)}
+                  />
+                  <span className="mt-1 block text-xs text-slate">{f.hint}</span>
+                </Field>
+              ))}
+            </div>
+          </div>
+
           <div className="sm:col-span-2"><Btn tone="primary" loading={act.loading} onClick={submit}>Создать</Btn><Notice error={act.error} ok={act.okMsg} /></div>
         </div>
       )}

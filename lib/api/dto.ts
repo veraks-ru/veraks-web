@@ -214,6 +214,8 @@ export interface ApiSeason {
   status: "upcoming" | "active" | "finished";
   // Снапшот правил лиги — фиксируется при активации сезона, до этого null.
   league_config: LeagueConfigInput | null;
+  /** Пороги, выбранные заранее: их заморозит активация, в т.ч. автоматическая. */
+  planned_league_config: LeagueConfigInput | null;
   created_at: string;
   updated_at: string;
 }
