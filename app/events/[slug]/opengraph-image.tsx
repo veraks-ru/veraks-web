@@ -61,7 +61,7 @@ export default async function Image({
 
   const titleSize = title.length > 90 ? 46 : title.length > 55 ? 58 : 70;
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -158,4 +158,23 @@ export default async function Image({
       headers: { "cache-control": "public, max-age=600, s-maxage=600" },
     },
   );
+
+  // Дочитываем картинку в память и отдаём с Content-Length.
+  //
+  // ImageResponse отвечает потоком, без длины. Ссылку из-за этого не
+  // разворачивали ни WhatsApp, ни Telegram: их парсеры превью не берут
+  // изображение, размер которого нельзя узнать заранее (проверка «не тяжелее
+  // лимита» делается ДО загрузки). Внешне выглядело как «превью не работает»,
+  // хотя og-теги, картинка и коды ответа были в порядке.
+  //
+  // Карточка весит ~110 КБ — буферизовать её безопаснее, чем экономить память
+  // на стриминге и терять превью.
+  const png = await image.arrayBuffer();
+  return new Response(png, {
+    headers: {
+      "content-type": contentType,
+      "content-length": String(png.byteLength),
+      "cache-control": "public, max-age=600, s-maxage=600",
+    },
+  });
 }

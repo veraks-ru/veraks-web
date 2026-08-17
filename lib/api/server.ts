@@ -24,10 +24,17 @@ const TIMEOUT_MS = 4000;
 type Fetched<T> = { ok: true; data: T } | { ok: false; status: number };
 
 /** status: 0 — сеть, таймаут или нечитаемое тело. */
-async function fetchPublic<T>(path: string): Promise<Fetched<T>> {
+async function fetchPublic<T>(
+  path: string,
+  opts: { revalidate?: number } = {},
+): Promise<Fetched<T>> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
-      cache: "no-store",
+      // Событие читаем всегда свежим (статус меняется), справочники — с
+      // кэшем: см. вызов для /categories.
+      ...(opts.revalidate === undefined
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: opts.revalidate } }),
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -62,7 +69,12 @@ export const getPublicEvent = cache(
     // клиентском EventPageClient, чтобы сервер и клиент не расходились.
     if (ev.data.status === "proposed") return { kind: "notfound" };
 
-    const cats = await fetchPublic<ApiCategory[]>("/categories");
+    // Справочник категорий кэшируется: он меняется раз в месяцы, а лишний
+    // сетевой поход удваивал время генерации OG-карточки — а её ждут парсеры
+    // превью с коротким терпением.
+    const cats = await fetchPublic<ApiCategory[]>("/categories", {
+      revalidate: 300,
+    });
     const categoryTitle = cats.ok
       ? (cats.data.find((c) => c.id === ev.data.category_id)?.title ?? null)
       : null;
