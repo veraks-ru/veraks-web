@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { shareLink } from "@/lib/share";
 import { shareUrl } from "@/lib/shareUrl";
 import type { PredictionEvent } from "@/lib/types";
 
@@ -26,28 +27,14 @@ export function ShareEventButton({
   const [copied, setCopied] = useState(false);
 
   async function share() {
-    const url = shareUrl(event.slug);
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Веракс",
-          text: `«${event.title}» — а вы как думаете?`,
-          url,
-        });
-        return;
-      }
-    } catch {
-      // Пользователь закрыл системное окно — молча выходим, копировать
-      // ссылку за него не надо: он уже отказался от действия.
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
+    const outcome = await shareLink({
+      url: shareUrl(event.slug),
+      title: "Веракс",
+      text: `«${event.title}» — а вы как думаете?`,
+    });
+    if (outcome !== "copied") return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
   }
 
   return (

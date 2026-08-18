@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShareCard } from "./ShareCard";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/components/app/AuthProvider";
+import { shareLink } from "@/lib/share";
 import { shareUrl } from "@/lib/shareUrl";
 import type { PredictionEvent } from "@/lib/types";
 
@@ -17,31 +18,29 @@ export function ShareActions({ event }: { event: PredictionEvent }) {
 
   useEffect(() => {
     setUrl(shareUrl(event.slug));
-    setCanShare(typeof navigator !== "undefined" && !!navigator.share);
+    // Ровно то же условие, что и в lib/share.ts: на десктопе системного окна
+    // не будет, а кнопка, дублирующая «скопировать», только путает.
+    setCanShare(
+      typeof navigator !== "undefined" &&
+        typeof navigator.share === "function" &&
+        navigator.maxTouchPoints > 0,
+    );
   }, [event.slug]);
 
   const shareText = `Мой прогноз на «${event.title}» — проверь свой на Вераксе`;
 
   async function share() {
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Веракс", text: shareText, url });
-      } else {
-        await copy();
-      }
-    } catch {
-      /* пользователь отменил — игнорируем */
-    }
+    const outcome = await shareLink({ url, title: "Веракс", text: shareText });
+    if (outcome === "copied") flashCopied();
   }
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
+    if ((await shareLink({ url })) === "copied") flashCopied();
+  }
+
+  function flashCopied() {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
   }
 
   return (
