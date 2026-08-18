@@ -58,7 +58,7 @@ export function ShareEventButton({
       onClick={share}
     >
       <ShareIcon className="size-4" />
-      {copied ? "Ссылка скопирована" : "Позвать других"}
+      {copied ? "Скопировано" : "Поделиться ссылкой"}
     </Button>
   );
 }
