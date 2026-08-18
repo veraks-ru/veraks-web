@@ -384,3 +384,13 @@ export const redeemInvite = (code: string) =>
     body: { code },
     allow: [404, 409],
   });
+
+/**
+ * Включить или выключить автопродление. Выключение оставляет доступ до конца
+ * оплаченного периода и стирает сохранённый способ оплаты.
+ */
+export const setAutoRenew = (subscriptionId: string, enabled: boolean) =>
+  apiFetch<ApiSubscription>(
+    `/billing/subscriptions/${subscriptionId}/auto-renew`,
+    { method: "POST", body: { enabled } },
+  );

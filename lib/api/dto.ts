@@ -287,6 +287,10 @@ export interface ApiSubscription {
   provider: string;
   status: "incomplete" | "active" | "past_due" | "canceled" | "expired";
   current_period_end: string | null;
+  /** Спишется ли следующий период автоматически. */
+  auto_renew: boolean;
+  /** Сохранён ли способ оплаты — без него автопродление не включить. */
+  has_payment_method: boolean;
 }
 
 export interface ApiNotification {

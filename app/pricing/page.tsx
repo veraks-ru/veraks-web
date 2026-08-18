@@ -72,6 +72,20 @@ export default function PricingPage() {
           </div>
         )}
 
+        <p className="mt-6 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-slate">
+          Подписка продлевается автоматически: та же сумма списывается с карты
+          в конце каждого периода, пока вы не отключите продление. Отключить
+          можно в любой момент{" "}
+          <Link href="/account" className="font-600 text-graphite underline">
+            в кабинете
+          </Link>{" "}
+          — доступ останется до конца оплаченного периода. Условия — в{" "}
+          <Link href="/legal/oferta" className="font-600 text-graphite underline">
+            оферте
+          </Link>
+          .
+        </p>
+
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {TARIFFS.map((t) => (
             <div
@@ -90,6 +104,11 @@ export default function PricingPage() {
               </div>
               <p className="mt-1 text-xs text-slate">{t.period}</p>
               <p className="num mt-4 text-3xl font-700">{fmtRub(prices[t.plan] ?? t.priceRub)}</p>
+              {/* Периодичность и сумма списания — до оплаты, как требует
+                  оферта (п. 5.6) и правила приёма рекуррентных платежей. */}
+              <p className="mt-1 text-xs text-slate">
+                затем {fmtRub(prices[t.plan] ?? t.priceRub)} каждые {t.period.toLowerCase()}
+              </p>
               <p className="mt-3 flex-1 text-sm leading-snug text-slate">{t.note}</p>
 
               <button

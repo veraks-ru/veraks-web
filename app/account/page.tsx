@@ -9,6 +9,7 @@ import { Panel, Field, Btn, Notice, inputCls, useAction } from "@/components/adm
 import { Spinner } from "@/components/ui/Spinner";
 import { fmtDate, rub } from "@/lib/format";
 import {
+  setAutoRenew,
   getMySubscription,
   cancelSubscription,
   refundSubscription,
@@ -32,6 +33,8 @@ const PAYOUT_STATUS: Record<string, string> = {
 };
 
 const PLAN_TITLE = new Map(TARIFFS.map((t) => [t.plan as string, t.title]));
+// «раз в 30 дней» — понятнее, чем «раз в месяц»: столько и оплачено.
+const PLAN_PERIOD = new Map(TARIFFS.map((t) => [t.plan as string, t.period]));
 const SUB_STATUS: Record<string, string> = {
   active: "активна",
   incomplete: "ожидает оплаты",
@@ -146,8 +149,8 @@ function DangerZoneSection() {
             Аккаунт будет удалён безвозвратно: ФИО стирается, псевдоним, имя и
             email обнуляются, войти повторно этим же человеком будет нельзя.
             Публичный трек-рекорд прогнозов останется, но обезличенным. Если
-            есть активная подписка — автопродление отменится автоматически
-            (уже списанные средства не возвращаются).
+            есть активная подписка — автопродление отключится, и новых списаний
+            не будет (уже списанные средства не возвращаются).
           </p>
           <label className="flex items-start gap-2 text-sm">
             <input
@@ -525,9 +528,42 @@ function SubscriptionSection() {
             <Stat label="Тариф" value={PLAN_TITLE.get(sub.plan) ?? sub.plan} />
             <Stat label="Статус" value={SUB_STATUS[sub.status] ?? sub.status} />
             <Stat
-              label="Действует до"
+              label={sub.auto_renew ? "Спишется" : "Действует до"}
               value={sub.current_period_end ? fmtDate(sub.current_period_end) : "—"}
             />
+          </div>
+
+          {/* Человек должен видеть, спишутся ли с него деньги снова, и уметь
+              это выключить в один клик — так обещает оферта (п. 5.8). */}
+          <div className="mt-5 rounded-xl border border-line bg-paper p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-600">
+                  {sub.auto_renew ? "Продлевается автоматически" : "Автопродление выключено"}
+                </p>
+                <p className="mt-1 text-sm text-slate">
+                  {sub.auto_renew
+                    ? `${rub(sub.price_kopecks)} спишется ${
+                        sub.current_period_end ? fmtDate(sub.current_period_end) : "в конце периода"
+                      } и далее раз в ${PLAN_PERIOD.get(sub.plan) ?? "период"}.`
+                    : "Доступ закончится в конце оплаченного периода — продлить можно вручную."}
+                </p>
+              </div>
+              {sub.auto_renew ? (
+                <Btn
+                  loading={act.loading}
+                  onClick={async () => {
+                    const r = await act.run(
+                      () => setAutoRenew(sub.id, false),
+                      "Автопродление выключено",
+                    );
+                    if (r) await reload();
+                  }}
+                >
+                  Выключить
+                </Btn>
+              ) : null}
+            </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Btn
