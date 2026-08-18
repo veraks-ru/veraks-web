@@ -11,8 +11,11 @@
  * Переменной нет — берём адрес текущего сайта, то есть прежнее поведение.
  */
 export function shareUrl(slug: string): string {
+  return `${shareOrigin()}/events/${slug}`;
+}
+
+/** Адрес, с которого строятся ссылки для отправки (без завершающего слэша). */
+export function shareOrigin(): string {
   const mirror = process.env.NEXT_PUBLIC_SHARE_BASE?.replace(/\/+$/, "");
-  const origin =
-    mirror || (typeof window === "undefined" ? "" : window.location.origin);
-  return `${origin}/events/${slug}`;
+  return mirror || (typeof window === "undefined" ? "" : window.location.origin);
 }

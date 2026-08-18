@@ -4,6 +4,7 @@ import { apiFetch } from "./client";
 import type { EventInput } from "./admin";
 import type { ConfidenceGrade } from "@/lib/confidence";
 import type {
+  ApiAccessGrant,
   ApiApiKey,
   ApiAuthProviders,
   ApiCalibration,
@@ -369,3 +370,17 @@ export const getMySeasonStanding = (slug: string) =>
 
 export const getMyFollowers = () =>
   apiFetch<ApiUserRef[]>("/users/me/followers", { allow: [401] });
+
+/**
+ * Активировать приглашение уже вошедшим пользователем.
+ *
+ * Отдельным шагом после входа, а не при регистрации: код из ссылки фронтенд
+ * помнит сам и предъявляет, когда сессия появилась. 404 — кода нет, 409 —
+ * ссылку уже использовали или отозвали.
+ */
+export const redeemInvite = (code: string) =>
+  apiFetch<ApiAccessGrant>("/invites/redeem", {
+    method: "POST",
+    body: { code },
+    allow: [404, 409],
+  });

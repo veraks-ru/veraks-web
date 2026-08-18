@@ -472,3 +472,27 @@ export interface ApiChainVerification {
   checked: number;
   first_broken_id: number | null;
 }
+
+// ── Пригласительный доступ ──
+
+/** Одноразовая ссылка, дающая право голосовать без оплаты. */
+export interface ApiInvite {
+  id: string;
+  /** Код для ссылки /join?invite=… */
+  code: string;
+  /** Срок доступа от активации; null — бессрочно. */
+  duration_days: number | null;
+  note: string;
+  created_at: string;
+  redeemed_by: string | null;
+  redeemed_at: string | null;
+  revoked_at: string | null;
+}
+
+/** Доступ, выданный по приглашению. */
+export interface ApiAccessGrant {
+  id: string;
+  /** Когда закончится; null — бессрочно. */
+  expires_at: string | null;
+  granted_at: string;
+}

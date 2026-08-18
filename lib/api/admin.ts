@@ -4,6 +4,7 @@
 import { apiFetch } from "./client";
 import type {
   ApiAdminUser,
+  ApiInvite,
   ApiAdminUserPage,
   ApiAuditLogPage,
   ApiCategory,
@@ -280,3 +281,19 @@ export const suspendUser = (userId: string, reason: string) =>
 
 export const reinstateUser = (userId: string) =>
   apiFetch<ApiAdminUser>(`/admin/users/${userId}/reinstate`, { method: "POST" });
+
+/* ── Пригласительные ссылки (admin) ── */
+
+/**
+ * Создать одноразовое приглашение. ``duration_days`` не задан — доступ
+ * бессрочный; иначе он истекает через столько дней после активации.
+ */
+export const createInvite = (body: { duration_days?: number | null; note?: string }) =>
+  apiFetch<ApiInvite>("/admin/invites", { method: "POST", body });
+
+export const listInvites = (limit = 100) =>
+  apiFetch<ApiInvite[]>(`/admin/invites?limit=${limit}`, { allow: [403] });
+
+/** Погасить ещё не использованную ссылку. */
+export const revokeInvite = (id: string) =>
+  apiFetch<ApiInvite>(`/admin/invites/${id}/revoke`, { method: "POST" });

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/components/app/AuthProvider";
 import { API_BASE, ApiError } from "@/lib/api/client";
 import { getAuthProviders, requestEmailLink } from "@/lib/api/endpoints";
+import { rememberInvite } from "@/lib/invite";
 import { EMAIL_RE } from "@/lib/validation";
 import type { ApiAuthProviders } from "@/lib/api/dto";
 
@@ -28,7 +29,16 @@ type ProvidersState =
 export default function JoinPage() {
   const { me, loading } = useAuth();
   const router = useRouter();
+  const params = useSearchParams();
   const [providers, setProviders] = useState<ProvidersState>({ status: "loading" });
+
+  // Код приглашения запоминаем сразу: активировать его можно будет только
+  // после входа, а до тех пор человек успеет уйти в почту и вернуться в
+  // новой вкладке (см. lib/invite.ts).
+  const invited = params.get("invite");
+  useEffect(() => {
+    if (invited) rememberInvite(invited);
+  }, [invited]);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,12 +78,29 @@ export default function JoinPage() {
 
       <div className="flex flex-1 items-center justify-center px-5 py-10">
         <div className="w-full max-w-md">
+          {invited && <InviteBanner />}
           <div className="rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/60 p-7 backdrop-blur-sm sm:p-9">
             <JoinCard providers={providers} />
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * Пришедшему по приглашению говорим, что его ждёт, до того как он введёт
+ * почту: иначе вход выглядит как обычный, и ценность приглашения теряется.
+ * Точный срок не называем — он известен бэкенду и зависит от ссылки.
+ */
+function InviteBanner() {
+  return (
+    <div className="mb-4 rounded-2xl border border-signal/40 bg-signal/10 p-4 text-center">
+      <p className="text-sm font-600 text-signal">Вас пригласили</p>
+      <p className="mt-1 text-sm text-haze">
+        Голосовать можно будет без подписки — доступ откроется сразу после входа.
+      </p>
+    </div>
   );
 }
 

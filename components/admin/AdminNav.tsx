@@ -16,6 +16,7 @@ const LINKS = [
 // (см. require_admin в backend/app/modules/identity/api/dependencies.py и
 // backend/app/shared/audit/api/dependencies.py).
 const ADMIN_ONLY_LINKS = [
+  { href: "/admin/invites", label: "Приглашения" },
   { href: "/admin/users", label: "Пользователи" },
   { href: "/admin/audit", label: "Аудит" },
 ];

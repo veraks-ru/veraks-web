@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/components/app/AuthProvider";
+import { InviteRedeemer } from "@/components/app/InviteRedeemer";
 import { AppChrome } from "@/components/app/AppChrome";
 import { AppleSplashLinks } from "@/components/app/AppleSplashLinks";
 
@@ -126,6 +127,7 @@ export default function RootLayout({
       <AppleSplashLinks />
       <body>
         <AuthProvider>
+          <InviteRedeemer />
           <AppChrome>{children}</AppChrome>
         </AuthProvider>
       </body>
