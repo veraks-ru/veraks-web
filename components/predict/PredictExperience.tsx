@@ -4,10 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { ConfidenceDial } from "./ConfidenceDial";
 import { EventComments } from "@/components/events/EventComments";
+import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { ShareEventButton } from "@/components/share/ShareEventButton";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
+import { crowdReadingLabel } from "@/lib/crowd";
 import { ApiError } from "@/lib/api/client";
 import { putPrediction } from "@/lib/api/endpoints";
 import { useCategoryTitle } from "@/lib/api/useCategories";
@@ -75,6 +77,8 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
 
         <SourceDisclosure event={event} />
 
+        <CrowdPanel event={event} />
+
         {/* Дуга + вывод */}
         <section className="mt-8 rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/50 p-6 backdrop-blur-sm sm:p-8">
           <p className="text-center text-sm text-haze">
@@ -113,8 +117,6 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           />
         </section>
 
-        {/* Консенсус толпы на вводе не показываем: он скрыт до закрытия приёма
-            (анти-якорение), а проценты на вводе запрещены (DESIGN.md). */}
 
         {/* Действие — гейт только по входу (участие бесплатно). */}
         <div className="mt-6">
@@ -185,6 +187,52 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
       </div>
     </main>
   );
+}
+
+/**
+ * Что думают остальные — видно всем и до того, как человек высказался.
+ *
+ * Это главная причина заходить на площадку тому, кто сам не прогнозирует:
+ * публичный ответ на вопрос «во что верят люди». Раньше блок прятался до
+ * закрытия приёма (анти-якорение), и площадка была бесполезна для читателя.
+ *
+ * Показание — слово, а не процент: на вводе процентов нет (DESIGN.md), и
+ * сводка это правило не обходит.
+ */
+function CrowdPanel({ event }: { event: PredictionEvent }) {
+  if (event.forecasters === 0) {
+    return (
+      <p className="mt-6 text-center text-sm text-haze-dim">
+        Никто ещё не высказался — ваш прогноз будет первым.
+      </p>
+    );
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/40 p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm text-haze">Что думают остальные</p>
+        <p className="text-xs text-haze-dim">
+          {event.forecasters}&nbsp;{peopleWord(event.forecasters)}
+        </p>
+      </div>
+      <p className="mt-1 font-display text-xl font-600 text-white">
+        {crowdReadingLabel(event.crowd)}
+      </p>
+      <div className="mt-4">
+        <MiniConsensus crowd={event.crowd} mine={event.myGrade} labelled />
+      </div>
+    </section>
+  );
+}
+
+/** «1 человек / 2 человека / 5 человек» — без этого счётчик читается коряво. */
+function peopleWord(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "человек";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "человека";
+  return "человек";
 }
 
 function GatePanel({

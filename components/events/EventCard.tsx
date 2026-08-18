@@ -60,7 +60,8 @@ export function EventCard({ event }: { event: PredictionEvent }) {
         )}
       </p>
 
-      {/* Консенсус толпы раскрывается только после закрытия приёма (анти-якорение). */}
+      {/* Мнение толпы видно всегда, включая открытый приём: ради этого
+          индикатора на площадку заходят и те, кто не прогнозирует. */}
       <div className="mt-4 flex-1">
         <div className="rounded-xl bg-paper p-3.5">
           {(predicted || isResolved) && (

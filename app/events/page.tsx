@@ -29,16 +29,6 @@ export default function EventsPage() {
   const [onlyMine, setOnlyMine] = useState(false);
   const [sort, setSort] = useState<Sort>("soon");
 
-  // «Самые активные» сортирует по числу участников, а оно недоступно, пока
-  // приём открыт (сводка скрыта до закрытия — анти-якорение), поэтому на
-  // вкладках «Открытые» и «Скоро закрытие» у всех событий 0 — сортировка
-  // становится бессмысленной. На этих вкладках опцию отключаем.
-  const activeSortUnavailable = status === "open" || status === "soon";
-
-  useEffect(() => {
-    if (activeSortUnavailable && sort === "active") setSort("soon");
-  }, [activeSortUnavailable, sort]);
-
   useEffect(() => {
     let alive = true;
     setError(false);
@@ -132,7 +122,6 @@ export default function EventsPage() {
           setOnlyMine={setOnlyMine}
           sort={sort}
           setSort={setSort}
-          activeSortUnavailable={activeSortUnavailable}
         />
 
         <div className="mt-6">
@@ -179,7 +168,6 @@ function Filters(props: {
   setOnlyMine: (v: boolean) => void;
   sort: Sort;
   setSort: (v: Sort) => void;
-  activeSortUnavailable: boolean;
 }) {
   const statuses: { k: Status; label: string }[] = [
     { k: "all", label: "Все" },
@@ -224,10 +212,8 @@ function Filters(props: {
               <option
                 key={s.k}
                 value={s.k}
-                disabled={s.k === "active" && props.activeSortUnavailable}
               >
                 {s.label}
-                {s.k === "active" && props.activeSortUnavailable ? " (недоступно)" : ""}
               </option>
             ))}
           </select>
