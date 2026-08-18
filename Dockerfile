@@ -13,6 +13,10 @@ ARG NEXT_PUBLIC_API_BASE=http://localhost:8000
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ARG NEXT_PUBLIC_GOCTOPUS_URL=ws://localhost:7890/ws
 ENV NEXT_PUBLIC_GOCTOPUS_URL=$NEXT_PUBLIC_GOCTOPUS_URL
+# Адрес для ссылок, которыми делятся: зеркало, доступное парсерам превью
+# Telegram (см. lib/shareUrl.ts). Пусто — ссылки ведут на текущий домен.
+ARG NEXT_PUBLIC_SHARE_BASE=
+ENV NEXT_PUBLIC_SHARE_BASE=$NEXT_PUBLIC_SHARE_BASE
 RUN npm run build
 
 FROM node:20-alpine AS run

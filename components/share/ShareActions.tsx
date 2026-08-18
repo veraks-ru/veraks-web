@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShareCard } from "./ShareCard";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/components/app/AuthProvider";
+import { shareUrl } from "@/lib/shareUrl";
 import type { PredictionEvent } from "@/lib/types";
 
 export function ShareActions({ event }: { event: PredictionEvent }) {
@@ -15,7 +16,7 @@ export function ShareActions({ event }: { event: PredictionEvent }) {
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
-    setUrl(`${window.location.origin}/events/${event.slug}`);
+    setUrl(shareUrl(event.slug));
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
   }, [event.slug]);
 

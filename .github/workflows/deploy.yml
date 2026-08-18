@@ -12,6 +12,9 @@ env:
   # Публичные URL фронта — вшиваются в бандл на сборке образа.
   NEXT_PUBLIC_API_BASE: https://api.veraks.ru
   NEXT_PUBLIC_GOCTOPUS_URL: wss://veraks.ru/ws
+  # Зеркало для ссылок, которыми делятся: до основного домена парсер превью
+  # Telegram не достаёт (у хостинга нет связности с их сетями).
+  NEXT_PUBLIC_SHARE_BASE: https://t.veraks.ru
 
 jobs:
   build-check:
@@ -57,6 +60,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_BASE=${{ env.NEXT_PUBLIC_API_BASE }}
             NEXT_PUBLIC_GOCTOPUS_URL=${{ env.NEXT_PUBLIC_GOCTOPUS_URL }}
+            NEXT_PUBLIC_SHARE_BASE=${{ env.NEXT_PUBLIC_SHARE_BASE }}
           tags: |
             ${{ env.WEB_IMAGE }}:${{ steps.sha.outputs.sha }}
             ${{ env.WEB_IMAGE }}:latest
