@@ -7,12 +7,6 @@ import {
   eventTimingLabel,
 } from "@/lib/eventMeta";
 
-// Картинка собирается на запрос (бэкенда на сборке нет), но результат живёт
-// 10 минут: рендер занимает около секунды, а парсеры превью ждут неохотно —
-// каждый повторный заход не должен платить ту же цену. Срок совпадает с
-// cache-control ниже.
-export const revalidate = 600;
-
 export const alt = `Карточка события — ${BRAND}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -95,15 +89,87 @@ function Glyph() {
   );
 }
 
+/** Готовая карточка и отметка времени, когда её собрали. */
+type Cached = { png: ArrayBuffer; at: number };
+
+// Кэш живёт в памяти процесса, а не в ISR Next.js. Причина: маршруты-метаданные
+// с динамическим сегментом отдают ответ мимо ISR (в ответе нет x-nextjs-cache),
+// поэтому объявленный revalidate там не действовал и карточка пересобиралась
+// на каждый запрос — 3–5 секунд на проде, где контейнеру выделено полъядра.
+// Парсеры превью столько не ждут, и ссылка разворачивалась без картинки.
+//
+// Карточка весит ~100 КБ, событий сотня-другая — потолок держим явно.
+const TTL_MS = 600_000; // Совпадает с cache-control ниже.
+const MAX_ENTRIES = 120;
+const CACHE = new Map<string, Cached>();
+
+// Незавершённые рендеры: ссылку на событие открывают разом несколько парсеров
+// (Telegram, WhatsApp, сам браузер), и без этой карты каждый запустил бы свой
+// рендер — на полъядре они бы душили друг друга. Первый рендерит, остальные
+// ждут его результат.
+const INFLIGHT = new Map<string, Promise<ArrayBuffer>>();
+
+async function cardFor(slug: string): Promise<ArrayBuffer> {
+  const fresh = CACHE.get(slug);
+  if (fresh && Date.now() - fresh.at < TTL_MS) return fresh.png;
+
+  const running = INFLIGHT.get(slug);
+  if (running) return running;
+
+  const job = renderCard(slug)
+    .then((png) => {
+      CACHE.set(slug, { png, at: Date.now() });
+      // Вытесняем самые давние: Map хранит порядок вставки, а перезапись
+      // ключа его не обновляет, поэтому в голове всегда самые старые записи.
+      while (CACHE.size > MAX_ENTRIES) {
+        const oldest = CACHE.keys().next();
+        if (oldest.done) break;
+        CACHE.delete(oldest.value);
+      }
+      return png;
+    })
+    .catch((err: unknown) => {
+      // Протухшая карточка лучше пустого превью: статус на ней мог устареть,
+      // но ссылка всё равно развернётся.
+      const stale = CACHE.get(slug);
+      if (stale) return stale.png;
+      throw err;
+    })
+    .finally(() => {
+      INFLIGHT.delete(slug);
+    });
+
+  INFLIGHT.set(slug, job);
+  return job;
+}
+
 export default async function Image({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  // Кэш на пять минут: карточку тянут парсеры превью, для которых полторы
-  // секунды рендера — повод отказаться от картинки. Статус события за это
-  // время устаревает несильно, а cache-control ниже обещает те же 10 минут.
+  const png = await cardFor(slug);
+
+  // Дочитанная в память картинка отдаётся с Content-Length.
+  //
+  // ImageResponse отвечает потоком, без длины. Ссылку из-за этого не
+  // разворачивали ни WhatsApp, ни Telegram: их парсеры превью не берут
+  // изображение, размер которого нельзя узнать заранее (проверка «не тяжелее
+  // лимита» делается ДО загрузки). Внешне выглядело как «превью не работает»,
+  // хотя og-теги, картинка и коды ответа были в порядке.
+  return new Response(png, {
+    headers: {
+      "content-type": contentType,
+      "content-length": String(png.byteLength),
+      "cache-control": "public, max-age=600, s-maxage=600",
+    },
+  });
+}
+
+async function renderCard(slug: string): Promise<ArrayBuffer> {
+  // Данные события тоже с кэшем: без него запрос к бэкенду делает маршрут
+  // динамическим, а нам он нужен ровно на время сборки картинки.
   const res = await getPublicEvent(slug, { revalidate: 300 });
 
   // ИНВАРИАНТ (анти-якорение): на карточке нет и не должно быть процентов,
@@ -263,32 +329,12 @@ export default async function Image({
         </div>
       </div>
     ),
-    {
-      ...size,
-      // По умолчанию next/og отдаёт immutable max-age=31536000 — для карточки
-      // с живым статусом это ловушка: CDN год держал бы «приём открыт» на уже
-      // разрешённом событии, а при недоступном бэкенде намертво закэшировал бы
-      // фолбэк. 10 минут — компромисс между свежестью и нагрузкой на рендер.
-      headers: { "cache-control": "public, max-age=600, s-maxage=600" },
-    },
+    // Заголовки здесь не задаём: наружу уходит не этот ответ, а собранный из
+    // байтов выше. По умолчанию next/og поставил бы immutable max-age на год —
+    // для карточки с живым статусом это ловушка (CDN держал бы «приём открыт»
+    // на уже разрешённом событии), поэтому свой cache-control на 10 минут.
+    size,
   );
 
-  // Дочитываем картинку в память и отдаём с Content-Length.
-  //
-  // ImageResponse отвечает потоком, без длины. Ссылку из-за этого не
-  // разворачивали ни WhatsApp, ни Telegram: их парсеры превью не берут
-  // изображение, размер которого нельзя узнать заранее (проверка «не тяжелее
-  // лимита» делается ДО загрузки). Внешне выглядело как «превью не работает»,
-  // хотя og-теги, картинка и коды ответа были в порядке.
-  //
-  // Карточка весит ~110 КБ — буферизовать её безопаснее, чем экономить память
-  // на стриминге и терять превью.
-  const png = await image.arrayBuffer();
-  return new Response(png, {
-    headers: {
-      "content-type": contentType,
-      "content-length": String(png.byteLength),
-      "cache-control": "public, max-age=600, s-maxage=600",
-    },
-  });
+  return image.arrayBuffer();
 }
