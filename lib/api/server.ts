@@ -69,8 +69,8 @@ export const getPublicEvent = cache(
       opts,
     );
     if (!ev.ok) {
-      // 404 — события нет; 422 — не-UUID в пути (то же правило, что в
-      // endpoints.getEvent). Остальное — бэкенд недоступен или сломан.
+      // 404 — события нет (в т.ч. нераспознанная ссылка); 422 — старые
+      // ссылки, не прошедшие валидацию UUID. Остальное — бэкенд недоступен.
       return ev.status === 404 || ev.status === 422
         ? { kind: "notfound" }
         : { kind: "unavailable" };

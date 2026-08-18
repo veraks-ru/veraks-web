@@ -28,6 +28,8 @@ export interface ApiCategory {
 
 export interface ApiEvent {
   id: string;
+  /** Короткий код для публичных ссылок (11 символов, как у YouTube). */
+  public_code: string;
   title: string;
   description: string;
   category_id: string;

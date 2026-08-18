@@ -1,5 +1,7 @@
 // Преобразование DTO бэкенда во вью-модели фронтенда (минимум изменений
-// в компонентах). Маршруты используют id события в роли «slug».
+// в компонентах). В роли «slug» маршрута /events/[slug] — короткий публичный
+// код события: именно он попадает в ссылки, которыми делятся. UUID тоже
+// принимается бэкендом, так что раньше разосланные ссылки не ломаются.
 
 import { GRADES, type ConfidenceGrade } from "@/lib/confidence";
 import type { CategoryStat, EventStatus, PredictionEvent, ScopeRatingStat } from "@/lib/types";
@@ -51,7 +53,7 @@ export function toPredictionEvent(
     extra.forecasters ?? extra.summary?.total_count ?? counts.reduce((a, b) => a + b, 0);
   return {
     id: ev.id,
-    slug: ev.id, // маршрут /events/[slug] принимает id
+    slug: ev.public_code,
     title: ev.title,
     categorySlug: catSlugById.get(ev.category_id) ?? "",
     status: mapStatus(ev.status),
