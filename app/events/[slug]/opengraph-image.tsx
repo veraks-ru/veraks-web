@@ -101,7 +101,10 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const res = await getPublicEvent(slug);
+  // Кэш на пять минут: карточку тянут парсеры превью, для которых полторы
+  // секунды рендера — повод отказаться от картинки. Статус события за это
+  // время устаревает несильно, а cache-control ниже обещает те же 10 минут.
+  const res = await getPublicEvent(slug, { revalidate: 300 });
 
   // ИНВАРИАНТ (анти-якорение): на карточке нет и не должно быть процентов,
   // сводки толпы и числа участников — только формулировка, категория,

@@ -56,8 +56,18 @@ export type PublicEventResult =
  * generateMetadata и сама страница не ходили на бэкенд дважды.
  */
 export const getPublicEvent = cache(
-  async (id: string): Promise<PublicEventResult> => {
-    const ev = await fetchPublic<ApiEvent>(`/events/${encodeURIComponent(id)}`);
+  async (
+    id: string,
+    opts: { revalidate?: number } = {},
+  ): Promise<PublicEventResult> => {
+    // ``no-store`` делает ВЕСЬ маршрут динамическим, и объявленный там
+    // ``revalidate`` перестаёт действовать. Для OG-карточки это была ловушка:
+    // она пересобиралась на каждый запрос по полторы секунды, а парсеры
+    // превью столько не ждут. Поэтому вызывающий может попросить кэш.
+    const ev = await fetchPublic<ApiEvent>(
+      `/events/${encodeURIComponent(id)}`,
+      opts,
+    );
     if (!ev.ok) {
       // 404 — события нет; 422 — не-UUID в пути (то же правило, что в
       // endpoints.getEvent). Остальное — бэкенд недоступен или сломан.
