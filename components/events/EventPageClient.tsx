@@ -13,6 +13,7 @@ import { PredictExperience } from "@/components/predict/PredictExperience";
 import { ResolvedEvent } from "@/components/events/ResolvedEvent";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { EventComments } from "@/components/events/EventComments";
+import { ShareEventButton } from "@/components/share/ShareEventButton";
 import { CategoryChip, StatusBadge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { useCategoryTitle } from "@/lib/api/useCategories";
@@ -198,6 +199,9 @@ function PendingEvent({ event }: { event: PredictionEvent }) {
           <p className="mt-1 leading-snug">{event.resolutionSource}</p>
           <p className="mt-3 leading-snug text-slate">{event.resolutionCriteria}</p>
         </section>
+        <div className="mt-6">
+          <ShareEventButton event={event} />
+        </div>
         <EventComments eventId={event.id} />
       </main>
     </div>

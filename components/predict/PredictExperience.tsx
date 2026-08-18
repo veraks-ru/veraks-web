@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ConfidenceDial } from "./ConfidenceDial";
 import { EventComments } from "@/components/events/EventComments";
+import { ShareEventButton } from "@/components/share/ShareEventButton";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
@@ -173,6 +174,13 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
             </p>
           )}
         </div>
+
+        {/* Позвать других, пока приём открыт: после закрытия прогноз сделать
+            уже нельзя, поэтому приглашение имеет смысл именно здесь. */}
+        <div className="mt-4">
+          <ShareEventButton event={event} tone="dark" />
+        </div>
+
         <EventComments eventId={event.id} />
       </div>
     </main>
