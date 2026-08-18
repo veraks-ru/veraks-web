@@ -133,13 +133,16 @@ async function rawFetch(path: string, opts: Options): Promise<Response> {
 export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T | null> {
   let resp = await rawFetch(path, opts);
 
-  // Молча освежаем сессию на 401 (кроме самого refresh и явно разрешённых 401).
-  if (
-    resp.status === 401 &&
-    !opts.allow?.includes(401) &&
-    path !== "/auth/refresh" &&
-    path !== "/auth/me"
-  ) {
+  // Молча освежаем сессию на 401 и повторяем запрос.
+  //
+  // ``allow: [401]`` здесь намеренно не учитывается. Он стоит почти на всех
+  // «моих» ручках, чтобы гость получал null вместо ошибки, — но раньше он
+  // заодно отменял и обновление сессии. У вошедшего с истёкшим access-токеном
+  // это выглядело так, будто данных просто нет: пустой список своих прогнозов,
+  // пустые уведомления, отсутствующая подписка. Молчаливая пустота хуже
+  // лишнего запроса, который делает гость: у него refresh отвечает 401, и
+  // ниже отрабатывает тот же allow.
+  if (resp.status === 401 && path !== "/auth/refresh" && path !== "/auth/me") {
     if (await tryRefresh()) {
       resp = await rawFetch(path, opts);
     }

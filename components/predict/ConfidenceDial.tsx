@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { GRADES, gradeColor } from "@/lib/confidence";
 import {
   VIEW_W,
@@ -30,6 +30,11 @@ export function ConfidenceDial({
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragging = useRef(false);
+  // Шкала — не нативный контрол, и браузер рисует вокруг неё рамку фокуса
+  // даже при обычном клике: получается прямоугольник вокруг дуги, которого
+  // никто не просил. Гасим его для указателя, но оставляем для клавиатуры —
+  // без рамки шкалу нельзя было бы вести стрелками вслепую.
+  const [pointerFocused, setPointerFocused] = useState(false);
 
   const pick = (clientX: number, clientY: number) => {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -39,6 +44,7 @@ export function ConfidenceDial({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
+    setPointerFocused(true);
     dragging.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     pick(e.clientX, e.clientY);
@@ -53,6 +59,7 @@ export function ConfidenceDial({
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
+    setPointerFocused(false);
     const cur = value ?? 2; // с середины, если ещё не выбрано
     let next: number | null = null;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = cur - 1;
@@ -72,7 +79,11 @@ export function ConfidenceDial({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-      className={`w-full touch-none select-none ${disabled ? "opacity-60" : "cursor-pointer"}`}
+      className={
+        "w-full touch-none select-none " +
+        (disabled ? "opacity-60 " : "cursor-pointer ") +
+        (pointerFocused ? "outline-none" : "")
+      }
       role="slider"
       tabIndex={disabled ? -1 : 0}
       aria-label="Насколько вы уверены, что это сбудется"
@@ -86,6 +97,7 @@ export function ConfidenceDial({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onKeyDown={onKeyDown}
+      onBlur={() => setPointerFocused(false)}
     >
       <defs>
         <linearGradient id="dial-spectrum" x1="0" y1="0" x2="1" y2="0">
