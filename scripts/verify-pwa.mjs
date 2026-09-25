@@ -21,7 +21,7 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" });
 const page = await context.newPage();
 
-await page.goto(`${base}/events`, { waitUntil: "load" });
+await page.goto(`${base}/`, { waitUntil: "load" });
 
 // 1. Манифест подключён и разбирается.
 const manifestHref = await page.getAttribute('link[rel="manifest"]', "href");

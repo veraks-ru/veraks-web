@@ -15,6 +15,8 @@ import { putPrediction } from "@/lib/api/endpoints";
 import { useCategoryTitle } from "@/lib/api/useCategories";
 import { deadlineLabel } from "@/lib/format";
 import { useAuth } from "@/components/app/AuthProvider";
+import { useDarkChrome } from "@/lib/chromeTone";
+import { withNext } from "@/lib/returnTo";
 import type { PredictionEvent } from "@/lib/types";
 
 type Phase = "edit" | "submitting" | "done";
@@ -22,6 +24,7 @@ type Phase = "edit" | "submitting" | "done";
 type SubmitError = "consent" | "generic";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
+  useDarkChrome(); // нижняя панель подстраивается под тёмный экран
   const { me, loading: authLoading } = useAuth();
   const categoryTitle = useCategoryTitle(event.categorySlug);
   const initial = event.myGrade ? indexOfGrade(event.myGrade) : null;
@@ -52,7 +55,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
 
   return (
     <main className="bg-oracle grain min-h-dvh text-white">
-      <div className="mx-auto w-full max-w-xl px-5 py-5 sm:px-8">
+      <div className="pt-safe mx-auto w-full max-w-xl px-5 py-5 sm:px-8">
         <Link
           href="/events"
           className="inline-flex items-center gap-1.5 text-sm font-600 text-haze hover:text-white"
@@ -170,7 +173,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           {error === "consent" && (
             <p className="mt-3 text-center text-sm text-warm" role="alert">
               Подтвердите согласия, чтобы участвовать.{" "}
-              <Link href="/onboarding" className="font-600 text-white underline">
+              <Link href={withNext("/onboarding", `/events/${event.slug}`)} className="font-600 text-white underline">
                 Перейти к согласиям
               </Link>
             </p>
@@ -220,7 +223,7 @@ function CrowdPanel({ event }: { event: PredictionEvent }) {
         {crowdReadingLabel(event.crowd)}
       </p>
       <div className="mt-4">
-        <MiniConsensus crowd={event.crowd} mine={event.myGrade} labelled />
+        <MiniConsensus crowd={event.crowd} mine={event.myGrade} labelled tone="dark" />
       </div>
     </section>
   );

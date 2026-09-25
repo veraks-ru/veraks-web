@@ -35,7 +35,7 @@ export default function FeedPage() {
     <div className="min-h-dvh bg-paper">
       <TopNav active="/feed" />
       <main className="mx-auto max-w-2xl px-5 py-8 sm:px-8">
-        <h1 className="font-display text-2xl font-600 sm:text-3xl">Лента</h1>
+        <h1 className="font-display text-2xl font-600 sm:text-3xl">Подписки</h1>
         <p className="mt-1 text-sm text-slate">
           Активность предсказателей, которых вы читаете.
         </p>

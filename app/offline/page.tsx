@@ -33,10 +33,10 @@ export default function OfflinePage() {
           Проверить снова
         </button>
         <Link
-          href="/events"
+          href="/"
           className="min-h-11 rounded-full border border-edge px-5 leading-[2.75rem] text-sm font-600 text-haze transition-colors hover:text-white"
         >
-          К событиям
+          К ленте
         </Link>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/app/AuthProvider";
 import { NotificationBell } from "@/components/app/NotificationBell";
 
 const LINKS = [
+  { href: "/", label: "Лента" },
   { href: "/events", label: "События" },
   { href: "/leaderboards", label: "Лидерборды" },
   { href: "/divisions", label: "Дивизионы" },
@@ -15,7 +16,7 @@ const LINKS = [
 ];
 
 /**
- * Шапка светлой среды (лента, лидерборды, профиль). active — текущий раздел.
+ * Шапка светлой среды (события, лидерборды, профиль). active — текущий раздел.
  *
  * На мобильном шапка однорядная: вся навигация ушла в нижнюю панель
  * (``BottomNav``), до которой достаёт большой палец. Здесь остаются только
@@ -32,11 +33,11 @@ export function TopNav({ active }: { active?: string }) {
   }
 
   const links = me
-    ? [...LINKS, { href: "/leagues", label: "Лиги" }, { href: "/feed", label: "Лента" }]
+    ? [...LINKS, { href: "/leagues", label: "Лиги" }, { href: "/feed", label: "Подписки" }]
     : LINKS;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+    <header className="pt-safe sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <div className="flex items-center gap-8">
           <Wordmark tone="light" />

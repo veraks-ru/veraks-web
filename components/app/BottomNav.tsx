@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/app/AuthProvider";
+import { useChromeTone } from "@/lib/chromeTone";
 
 /**
  * Нижняя навигация мобильного приложения.
@@ -28,6 +29,18 @@ const stroke = {
 };
 
 const ICONS = {
+  stack: (
+    <svg viewBox="0 0 24 24" className="size-5" aria-hidden {...stroke}>
+      <rect x="6.5" y="4" width="11" height="16" rx="2.5" />
+      <path d="M3.5 7.5v9M20.5 7.5v9" />
+    </svg>
+  ),
+  about: (
+    <svg viewBox="0 0 24 24" className="size-5" aria-hidden {...stroke}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+  ),
   events: (
     <svg viewBox="0 0 24 24" className="size-5" aria-hidden {...stroke}>
       <path d="M4 7h16M4 12h16M4 17h10" />
@@ -89,15 +102,15 @@ const ICONS = {
 };
 
 // Панель скрыта только там, где экран держит фокус на одном действии:
-// тёмная «сумеречная» среда (лендинг, вход, онбординг) и офлайн, плюс админка
-// со своей раскладкой и навигацией.
+// лендинг «о проекте», вход, онбординг, офлайн, плюс админка со своей
+// раскладкой и навигацией.
 //
-// Карточка события сюда НЕ входит, хотя DESIGN.md называет экран прогноза
-// тёмной средой: по факту он светлый и с обычной шапкой (bg-paper + TopNav),
-// то есть рядовой экран приложения. Прятать на нём навигацию — значит терять
-// её посреди основного сценария.
+// Тёмные экраны основного сценария — лента на «/» и открытое событие — панель
+// НЕ прячут: терять навигацию посреди главного сценария нельзя. Вместо этого
+// панель меняет тон вслед за экраном (lib/chromeTone.ts): экран объявляет
+// себя тёмным, панель подстраивается.
 const HIDDEN_PREFIXES = ["/join", "/onboarding", "/auth", "/admin", "/offline"];
-const HIDDEN_EXACT = ["/"];
+const HIDDEN_EXACT = ["/about"];
 
 function isHidden(pathname: string): boolean {
   if (HIDDEN_EXACT.includes(pathname)) return true;
@@ -114,6 +127,7 @@ export function useBottomNavVisible(): boolean {
 
 /** Разделы нижней панели — чтобы шапка их не дублировала. */
 export const BOTTOM_NAV_HREFS = new Set([
+  "/",
   "/events",
   "/leaderboards",
   "/seasons",
@@ -128,6 +142,8 @@ export function BottomNav() {
   const pathname = usePathname() || "/";
   const { me, signOut } = useAuth();
   const router = useRouter();
+  const tone = useChromeTone();
+  const dark = tone === "dark";
   const [moreOpen, setMoreOpen] = useState(false);
 
   // Лист закрывается при переходе: иначе он остаётся поверх новой страницы.
@@ -142,36 +158,39 @@ export function BottomNav() {
 
   if (isHidden(pathname)) return null;
 
-  const isOn = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  // Корень совпадает только сам с собой: иначе «Лента» горела бы везде.
+  const isOn = (href: string) => {
+    const path = href.split("?")[0];
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
-  const secondary = me
-    ? [
-        { href: "/feed", label: "Лента", icon: ICONS.feed },
-        { href: "/divisions", label: "Дивизионы", icon: ICONS.divisions },
-        { href: "/leagues", label: "Лиги", icon: ICONS.leagues },
-        { href: "/pricing", label: "Тарифы", icon: ICONS.pricing },
-        ...(["editor", "arbiter", "admin"].includes(me.role)
-          ? [{ href: "/admin", label: "Админка", icon: ICONS.admin }]
-          : []),
-      ]
-    : [{ href: "/divisions", label: "Дивизионы", icon: ICONS.divisions }];
+  // Пять вкладок одинаковы у гостя и у вошедшего; остальное — в листе «Ещё».
+  const secondary = [
+    { href: "/seasons", label: "Сезон", icon: ICONS.season },
+    ...(me ? [{ href: "/feed", label: "Подписки", icon: ICONS.feed }] : []),
+    { href: "/divisions", label: "Дивизионы", icon: ICONS.divisions },
+    ...(me ? [{ href: "/leagues", label: "Лиги", icon: ICONS.leagues }] : []),
+    { href: "/pricing", label: "Тарифы", icon: ICONS.pricing },
+    ...(me ? [] : [{ href: "/about", label: "О проекте", icon: ICONS.about }]),
+    ...(me && ["editor", "arbiter", "admin"].includes(me.role)
+      ? [{ href: "/admin", label: "Админка", icon: ICONS.admin }]
+      : []),
+  ];
 
   const tabs = [
+    { href: "/", label: "Лента", icon: ICONS.stack },
     { href: "/events", label: "События", icon: ICONS.events },
     { href: "/leaderboards", label: "Топ", icon: ICONS.board },
-    { href: "/seasons", label: "Сезон", icon: ICONS.season },
-    me
-      ? { href: null, label: "Ещё", icon: ICONS.more }
-      : { href: "/pricing", label: "Тарифы", icon: ICONS.pricing },
+    { href: null, label: "Ещё", icon: ICONS.more },
     me
       ? { href: "/account", label: "Кабинет", icon: ICONS.account }
-      : { href: "/join", label: "Войти", icon: ICONS.account },
+      : { href: "/join?next=%2F", label: "Войти", icon: ICONS.account },
   ];
 
   const tabClass = (on: boolean) =>
     `relative flex min-h-[3.25rem] w-full flex-col items-center justify-center gap-1 px-1 pt-2 pb-1.5 transition-colors ${
-      on ? "text-graphite" : "text-slate"
+      dark ? (on ? "text-white" : "text-haze") : on ? "text-graphite" : "text-slate"
     }`;
 
   const Reading = ({ on }: { on: boolean }) => (
@@ -198,41 +217,51 @@ export function BottomNav() {
           <div
             role="dialog"
             aria-label="Ещё разделы"
-            className="pb-safe absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border-t border-line bg-surface pt-2 shadow-2xl"
+            className={`pb-safe absolute inset-x-0 bottom-0 rounded-t-[1.5rem] border-t pt-2 shadow-2xl ${
+              dark
+                ? "border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]"
+                : "border-line bg-surface"
+            }`}
           >
             <span
               aria-hidden
-              className="mx-auto mb-1 block h-1 w-9 rounded-full bg-line"
+              className={`mx-auto mb-1 block h-1 w-9 rounded-full ${dark ? "bg-white/20" : "bg-line"}`}
             />
             <ul className="px-2 pb-[4.25rem]">
               {secondary.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-600 text-graphite active:bg-paper"
+                    className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-600 ${
+                      dark ? "text-white active:bg-white/5" : "text-graphite active:bg-paper"
+                    }`}
                   >
-                    <span className="text-slate">{item.icon}</span>
+                    <span className={dark ? "text-haze" : "text-slate"}>{item.icon}</span>
                     {item.label}
                   </Link>
                 </li>
               ))}
-              <li>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setMoreOpen(false);
-                    await signOut();
-                    router.push("/");
-                  }}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-sm font-600 text-slate active:bg-paper"
-                >
-                  <svg viewBox="0 0 24 24" className="size-5" aria-hidden {...stroke}>
-                    <path d="M15 5.5V4a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1.5" />
-                    <path d="M11 12h9m0 0-3-3m3 3-3 3" />
-                  </svg>
-                  Выйти
-                </button>
-              </li>
+              {me && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMoreOpen(false);
+                      await signOut();
+                      router.push("/");
+                    }}
+                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-sm font-600 ${
+                      dark ? "text-haze active:bg-white/5" : "text-slate active:bg-paper"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" className="size-5" aria-hidden {...stroke}>
+                      <path d="M15 5.5V4a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1.5" />
+                      <path d="M11 12h9m0 0-3-3m3 3-3 3" />
+                    </svg>
+                    Выйти
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -240,7 +269,11 @@ export function BottomNav() {
 
       <nav
         aria-label="Разделы"
-        className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md md:hidden"
+        className={`pb-safe fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md md:hidden ${
+          dark
+            ? "border-[color:var(--color-edge)] bg-[color:var(--color-ink)]/90"
+            : "border-line bg-surface/95"
+        }`}
       >
         <ul className="mx-auto flex max-w-lg">
           {tabs.map((tab) => (

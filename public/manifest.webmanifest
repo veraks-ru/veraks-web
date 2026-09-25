@@ -5,7 +5,7 @@
   "description": "Прогнозируйте исходы реальных событий, накапливайте измеримый трек-рекорд точности и соревнуйтесь в лидербордах.",
   "lang": "ru",
   "dir": "ltr",
-  "start_url": "/events",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -19,6 +19,13 @@
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ],
   "shortcuts": [
+    {
+      "name": "Лента",
+      "short_name": "Лента",
+      "description": "Открытые события: влево — нет, вправо — да",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
     {
       "name": "События",
       "short_name": "События",

@@ -46,13 +46,9 @@ export function EventCard({ event }: { event: PredictionEvent }) {
       </Link>
 
       <p className="mt-2.5 flex items-center gap-2 text-xs text-slate">
-        {/* Число участников — тоже часть сводки: скрыто, пока приём открыт. */}
-        {!isOpen && (
-          <>
-            <span className="num">{nPeople(event.forecasters)}</span>
-            <span aria-hidden>·</span>
-          </>
-        )}
+        {/* Число участников — часть сводки, а она видна всегда. */}
+        <span className="num">{nPeople(event.forecasters)}</span>
+        <span aria-hidden>·</span>
         {isResolved ? (
           <span>разрешено по источнику</span>
         ) : (
@@ -76,9 +72,7 @@ export function EventCard({ event }: { event: PredictionEvent }) {
               )}
             </div>
           )}
-          {isOpen ? (
-            <p className="text-xs text-slate">Консенсус раскроется после закрытия приёма.</p>
-          ) : crowdTotal(event.crowd) > 0 ? (
+          {crowdTotal(event.crowd) > 0 ? (
             <MiniConsensus crowd={event.crowd} mine={event.myGrade} />
           ) : (
             <p className="text-xs text-slate">Никто не голосовал по этому событию.</p>

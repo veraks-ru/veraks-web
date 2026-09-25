@@ -24,8 +24,8 @@ export function LandingNav() {
             ButtonLink задаёт inline-flex, и при конфликте display выигрывает
             он — на телефоне ссылки налезали на логотип и уезжали за экран. */}
         <span className="hidden items-center gap-3 sm:flex">
-          <ButtonLink href="/events" variant="ghost-dark" size="md">
-            Смотреть события
+          <ButtonLink href="/" variant="ghost-dark" size="md">
+            Открыть ленту
           </ButtonLink>
           <ButtonLink href="/pricing" variant="ghost-dark" size="md">
             Тарифы
