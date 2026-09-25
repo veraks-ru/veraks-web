@@ -52,6 +52,15 @@ export function SwipeCard({
     };
   }, [top, swipe.fly, flyRef]);
 
+  // Реальные формулировки бывают в пять строк: чем длиннее, тем мельче
+  // кегль, и жёсткий предел строк, чтобы карточка не разъезжалась.
+  const titleSize =
+    card.title.length > 70
+      ? "text-[1.2rem] leading-[1.25]"
+      : card.title.length > 45
+        ? "text-[1.35rem] leading-[1.22]"
+        : "text-[1.55rem] leading-[1.2] sm:text-[1.7rem]";
+
   const stacked = top
     ? undefined
     : {
@@ -67,15 +76,28 @@ export function SwipeCard({
       className="absolute inset-0 transition-[transform,opacity] duration-200"
       style={{ ...(top ? swipeBaseStyle : {}), ...stacked, zIndex: 3 - depth }}
     >
-      <article className="flex h-full flex-col rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/85 p-6 shadow-[0_28px_60px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-3 text-xs">
+      <article className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/85 p-5 shadow-[0_28px_60px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm sm:p-6">
+        <div className="flex items-center justify-between gap-2 text-xs">
           <span className="truncate rounded-full bg-white/10 px-2.5 py-1 font-600 text-haze">
             {card.category.title}
           </span>
-          <span className="shrink-0 font-600 text-warm">{deadlineLabel(card.closesAt)}</span>
+          <span className="flex shrink-0 items-center gap-2">
+            <span className="font-600 text-warm">{deadlineLabel(card.closesAt)}</span>
+            <button
+              type="button"
+              onClick={onDetails}
+              aria-label="Подробнее"
+              className="flex size-9 items-center justify-center rounded-full border border-[color:var(--color-edge)] text-signal"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+                <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.75" />
+                <path d="M12 11v5M12 8h.01" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+              </svg>
+            </button>
+          </span>
         </div>
 
-        <h2 className="mt-5 font-display text-[1.55rem] leading-[1.22] font-600 text-balance text-white sm:text-[1.7rem]">
+        <h2 className={`mt-4 line-clamp-5 font-display font-600 text-balance text-white ${titleSize}`}>
           {card.title}
         </h2>
 
@@ -85,24 +107,16 @@ export function SwipeCard({
           </p>
         )}
 
-        <div className="mt-auto border-t border-[color:var(--color-edge)] pt-4">
+        <div className="mt-auto shrink-0 border-t border-[color:var(--color-edge)] pt-3">
           {card.forecasters > 0 ? (
-            <MiniConsensus crowd={card.crowd} tone="dark" />
+            <MiniConsensus
+              crowd={card.crowd}
+              tone="dark"
+              aside={<span className="num shrink-0 text-haze-dim">{nPeople(card.forecasters)}</span>}
+            />
           ) : (
             <p className="text-sm text-haze">Никто ещё не высказался — ваш прогноз будет первым.</p>
           )}
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="num text-xs text-haze-dim">
-              {card.forecasters > 0 ? nPeople(card.forecasters) : ""}
-            </span>
-            <button
-              type="button"
-              onClick={onDetails}
-              className="min-h-11 rounded-full px-3 text-sm font-600 text-signal"
-            >
-              Подробнее
-            </button>
-          </div>
         </div>
       </article>
 

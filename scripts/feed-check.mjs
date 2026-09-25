@@ -114,6 +114,9 @@ async function run(name, me) {
     await page.waitForTimeout(500);
     log.push(`after ArrowUp, top: ${await topTitle()}`);
     await page.screenshot({ path: `${out}/${name}-4-after-skip.png` });
+    // подсказка «на домашний экран» (iOS, через 12 с) стоит сверху — закрываем, как сделал бы человек
+    const later = page.getByRole("button", { name: "Не сейчас" });
+    if (await later.count()) await later.click();
     // детали
     await page.getByRole("button", { name: "Подробнее" }).first().click();
     await page.waitForTimeout(300);

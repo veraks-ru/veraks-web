@@ -1,5 +1,6 @@
 import { GRADES, gradeColor, indexOfGrade } from "@/lib/confidence";
 import { crowdReadingLabel, crowdShares } from "@/lib/crowd";
+import type { ReactNode } from "react";
 import type { ConfidenceGrade, CrowdDistribution } from "@/lib/types";
 
 /**
@@ -8,17 +9,20 @@ import type { ConfidenceGrade, CrowdDistribution } from "@/lib/types";
  * вопрос «во что верят люди» — то, ради чего на площадку заходят и те, кто
  * сам не прогнозирует. mine — подсветить столбец пользователя.
  * tone — среда: подписи на светлом «приборе» и на тёмном экране разные.
+ * aside — что показать справа от «показания» (например, число участников).
  */
 export function MiniConsensus({
   crowd,
   mine,
   labelled = false,
   tone = "light",
+  aside,
 }: {
   crowd: CrowdDistribution;
   mine?: ConfidenceGrade | null;
   labelled?: boolean;
   tone?: "light" | "dark";
+  aside?: ReactNode;
 }) {
   const shares = crowdShares(crowd);
   const max = Math.max(...shares, 0.0001);
@@ -56,9 +60,12 @@ export function MiniConsensus({
         </div>
       )}
 
-      <p className={`mt-2 text-xs ${muted}`}>
-        Толпа склоняется:{" "}
-        <span className={`font-700 ${strong}`}>{crowdReadingLabel(crowd)}</span>
+      <p className={`mt-2 flex items-baseline justify-between gap-3 text-xs ${muted}`}>
+        <span>
+          Толпа склоняется:{" "}
+          <span className={`font-700 ${strong}`}>{crowdReadingLabel(crowd)}</span>
+        </span>
+        {aside}
       </p>
     </div>
   );
