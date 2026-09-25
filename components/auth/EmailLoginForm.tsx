@@ -12,7 +12,7 @@ const RESEND_COOLDOWN_S = 60;
 
 const inputCls =
   "w-full rounded-xl border border-[color:var(--color-edge)] bg-[color:var(--color-ink-3)]/60 " +
-  "px-3.5 py-2.5 text-sm text-white placeholder:text-haze-dim " +
+  "px-3.5 py-2.5 text-base text-white placeholder:text-haze-dim md:text-sm " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal";
 
 export type EmailLoginPhase = "form" | "sent";

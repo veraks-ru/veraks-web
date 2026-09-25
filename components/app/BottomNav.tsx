@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/app/AuthProvider";
 import { useChromeTone } from "@/lib/chromeTone";
+import { withNext } from "@/lib/returnTo";
 
 /**
  * Нижняя навигация мобильного приложения.
@@ -185,7 +186,7 @@ export function BottomNav() {
     { href: null, label: "Ещё", icon: ICONS.more },
     me
       ? { href: "/account", label: "Кабинет", icon: ICONS.account }
-      : { href: "/join?next=%2F", label: "Войти", icon: ICONS.account },
+      : { href: withNext("/join", pathname), label: "Войти", icon: ICONS.account },
   ];
 
   const tabClass = (on: boolean) =>

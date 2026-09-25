@@ -9,12 +9,17 @@ import { ApiError } from "@/lib/api/client";
 import { putPrediction } from "@/lib/api/endpoints";
 import { useDarkChrome } from "@/lib/chromeTone";
 import { GRADES, indexOfGrade } from "@/lib/confidence";
-import { gradeForDirection, type SwipeDecision, type SwipeDirection } from "@/lib/feed";
+import { UNDO_MS, gradeForDirection, type SwipeDecision, type SwipeDirection } from "@/lib/feed";
 import {
+  GUEST_OWNER,
   bumpDailyCount,
+  bumpOutboxAttempt,
   guestContinues,
+  isOutboxEntryStale,
+  outboxEntry,
   readDailyCount,
   readOutbox,
+  readOutboxFor,
   rememberGuestContinues,
   removeFromOutbox,
   upsertOutbox,
@@ -34,13 +39,8 @@ import { usePendingSubmits } from "./usePendingSubmits";
 const wordFor = (dir: SwipeDecision): string =>
   GRADES[indexOfGrade(gradeForDirection(dir))].label;
 
-const toOutbox = (card: FeedCard, dir: SwipeDecision) => ({
-  eventId: card.id,
-  slug: card.slug,
-  title: card.title,
-  grade: gradeForDirection(dir),
-  at: new Date().toISOString(),
-});
+/** Сколько гостевых ответов ждут входа. */
+const countWaiting = (): number => readOutbox().filter((e) => e.owner === GUEST_OWNER).length;
 
 /**
  * Лента-свайп — главный экран.
@@ -49,14 +49,18 @@ const toOutbox = (card: FeedCard, dir: SwipeDecision) => ({
  * вверх — пропустить. Карточка улетает сразу, прогноз уходит через несколько
  * секунд с возможностью отменить. Гость свайпает так же, но его ответы ждут
  * входа в локальном ящике и записываются после согласий.
+ *
+ * Решение всегда привязано к карточке, которую отпустили (жест передаёт её
+ * сюда), а не к «верхней на данный момент»: пока карточка летит, стопка
+ * может измениться отменой.
  */
 export function FeedScreen() {
   useDarkChrome();
   const router = useRouter();
-  const { me, loading: authLoading, subscribed } = useAuth();
+  const { me, loading: authLoading, subscribed, refresh } = useAuth();
 
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const feed = useFeed({ viewerKey: authLoading ? null : (me?.id ?? "guest"), categoryId });
+  const feed = useFeed({ viewerKey: authLoading ? null : (me?.id ?? GUEST_OWNER), categoryId });
 
   const [toast, setToast] = useState<ToastData | null>(null);
   const toastSeq = useRef(0);
@@ -68,29 +72,47 @@ export function FeedScreen() {
   }, []);
   const closeToast = useCallback((id: number) => setToast((t) => (t?.id === id ? null : t)), []);
 
+  // Для скринридера — то, чего нет в тосте (пропуск, отмена). Одинаковый
+  // текст подряд не озвучивается, поэтому чередуем невидимый суффикс.
   const [live, setLive] = useState("");
+  const announce = useCallback(
+    (text: string) => setLive((prev) => (prev === text ? `${text}​` : text)),
+    [],
+  );
+
   const [details, setDetails] = useState<FeedCard | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [gateDecision, setGateDecision] = useState<{ card: FeedCard; direction: SwipeDecision } | null>(null);
   const [enterFrom, setEnterFrom] = useState<SwipeDirection | null>(null);
   const [dailyCount, setDailyCount] = useState(0);
   const [waiting, setWaiting] = useState(0);
+  const [onlineTick, setOnlineTick] = useState(0);
   const flyRef = useRef<((dir: SwipeDirection) => void) | null>(null);
   const guestLast = useRef<{ card: FeedCard; direction: SwipeDecision } | null>(null);
+  /** id карточки, которая сейчас летит за экран: отмена в это время не принимается. */
+  const inFlight = useRef<string | null>(null);
 
   useEffect(() => {
     setDailyCount(readDailyCount());
-    setWaiting(readOutbox().length);
+    setWaiting(countWaiting());
   }, []);
 
   useEffect(() => setEnterFrom(null), [categoryId]);
 
+  useEffect(() => {
+    const onOnline = () => setOnlineTick((n) => n + 1);
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
+
   const pending = usePendingSubmits({
     onCommitted: () => setDailyCount(bumpDailyCount()),
     onClosed: (p) => say(`Приём по «${p.card.title}» уже закрыт`, { durationMs: 4000 }),
+    onRejected: (p) => say(`Ответ по «${p.card.title}» не принят`, { durationMs: 4000 }),
     onConsentRequired: () => router.push(withNext("/onboarding", "/")),
     onUnauthorized: () => {
-      setWaiting(readOutbox().length);
+      void refresh(); // сессии больше нет — лента переключится на гостя
+      setWaiting(countWaiting());
       setGateDecision(null);
       setGateOpen(true);
     },
@@ -100,24 +122,26 @@ export function FeedScreen() {
   /* ── Отмена ── */
 
   const undoPending = useCallback(() => {
+    if (inFlight.current) return;
     const entry = pending.undoLast();
     if (!entry) return;
     setEnterFrom(entry.direction);
     feed.restore(entry.card);
-    setLive("Отменено");
-  }, [pending, feed]);
+    announce("Отменено");
+  }, [pending, feed, announce]);
 
   const undoGuest = useCallback(() => {
+    if (inFlight.current) return;
     const g = guestLast.current;
     if (!g) return;
     guestLast.current = null;
     removeFromOutbox(g.card.id);
-    setWaiting(readOutbox().length);
+    setWaiting(countWaiting());
     setEnterFrom(g.direction);
     feed.restore(g.card);
     setToast(null);
-    setLive("Отменено");
-  }, [feed]);
+    announce("Отменено");
+  }, [feed, announce]);
 
   const undoAny = me ? undoPending : undoGuest;
   // Кнопка в тосте зовёт актуальную отмену через ref: сам эффект ниже зависит
@@ -139,79 +163,82 @@ export function FeedScreen() {
     }
   }, [lastPending, say, closeToast]);
 
-  /* ── Решение по верхней карточке ── */
+  /* ── Решение по карточке, которую отпустили ── */
 
   const onDecide = useCallback(
-    (dir: SwipeDirection): boolean => {
-      const card = feed.cards[0];
-      if (!card) return false;
-      if (dir === "up" || me) return true;
-      if (guestContinues()) return true;
+    (dir: SwipeDirection, card: FeedCard): boolean => {
+      if (inFlight.current) return false;
+      if (dir === "up" || me || guestContinues()) {
+        inFlight.current = card.id;
+        return true;
+      }
       // Первый свайп гостя: карточка остаётся, вход показываем здесь же.
-      upsertOutbox(toOutbox(card, dir));
-      setWaiting(readOutbox().length);
+      upsertOutbox(outboxEntry(card, gradeForDirection(dir), GUEST_OWNER));
+      setWaiting(countWaiting());
       setGateDecision({ card, direction: dir });
       setGateOpen(true);
       return false;
     },
-    [feed.cards, me],
+    [me],
   );
 
   const onGone = useCallback(
-    (dir: SwipeDirection) => {
-      const card = feed.cards[0];
-      if (!card) return;
+    (dir: SwipeDirection, card: FeedCard) => {
+      inFlight.current = null;
       setEnterFrom(null);
       if (dir === "up") {
         feed.skip(card.id);
-        setLive("Пропущено");
+        announce("Пропущено");
         return;
       }
       feed.remove(card.id);
-      setLive(`${wordFor(dir)}: ${card.title}`);
       if (me) {
-        pending.enqueue(card, dir, gradeForDirection(dir));
+        pending.enqueue(card, dir, gradeForDirection(dir), me.id);
         return;
       }
-      upsertOutbox(toOutbox(card, dir));
-      setWaiting(readOutbox().length);
+      upsertOutbox(outboxEntry(card, gradeForDirection(dir), GUEST_OWNER));
+      setWaiting(countWaiting());
       guestLast.current = { card, direction: dir };
-      say(wordFor(dir), { action: { label: "Отменить", onClick: undoGuest } });
+      say(wordFor(dir), { action: { label: "Отменить", onClick: undoGuest }, durationMs: UNDO_MS });
     },
-    [feed, me, pending, say, undoGuest],
+    [feed, me, pending, say, undoGuest, announce],
   );
 
-  /* ── Ящик: дозаписать после входа и согласий ── */
+  /* ── Ящик: дозаписать после входа и согласий, и когда вернулась сеть ── */
 
   const replaying = useRef(false);
   const removeCard = feed.remove;
   useEffect(() => {
     if (authLoading || !me || me.needs_onboarding || replaying.current) return;
-    const entries = readOutbox();
+    const entries = readOutboxFor(me.id);
     if (entries.length === 0) return;
     replaying.current = true;
     (async () => {
       let ok = 0;
       for (const e of entries) {
+        if (isOutboxEntryStale(e)) {
+          removeFromOutbox(e.eventId);
+          continue;
+        }
+        removeCard(e.eventId); // на время отправки карточки в стопке нет
+        bumpOutboxAttempt(e.eventId);
         try {
           await putPrediction(e.eventId, e.grade);
           removeFromOutbox(e.eventId);
-          removeCard(e.eventId);
           setDailyCount(bumpDailyCount());
           ok++;
         } catch (err) {
           const api = err instanceof ApiError ? err : null;
-          if (api?.status === 409) {
-            // Приём закрылся, пока ответ ждал входа — он уже не прогноз.
+          if (api?.status === 401 || api?.status === 403) break; // сначала войти/согласиться
+          if (api && api.status >= 400 && api.status < 500) {
+            // Приём закрылся (409) или ответ не примут никогда — не прогноз.
             removeFromOutbox(e.eventId);
-            removeCard(e.eventId);
             continue;
           }
-          if (api?.status === 401 || api?.status === 403) break;
           // Сеть/сервер: оставим до следующего раза.
         }
       }
-      setWaiting(readOutbox().length);
+      setWaiting(countWaiting());
       if (ok > 0) {
         say(`${ok} ${pluralize(ok, ["ответ засчитан", "ответа засчитаны", "ответов засчитаны"])}`, {
           durationMs: 4000,
@@ -219,16 +246,18 @@ export function FeedScreen() {
       }
       replaying.current = false;
     })();
-  }, [authLoading, me, removeCard, say]);
+  }, [authLoading, me, removeCard, say, onlineTick]);
 
   /* ── Клавиатура ── */
 
   const topCard = feed.cards[0] ?? null;
+  const sheetOpen = gateOpen || !!details;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t?.closest("input,textarea,select,[contenteditable]")) return;
-      if (gateOpen || details) return;
+      // Поля ввода, кнопки и ссылки сами знают, что делать с Enter и пробелом.
+      if (t?.closest("input,textarea,select,[contenteditable],button,a")) return;
+      if (sheetOpen || document.querySelector('[role="dialog"]')) return;
       switch (e.key) {
         case "ArrowLeft":
         case "ArrowRight":
@@ -253,7 +282,14 @@ export function FeedScreen() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [gateOpen, details, topCard, undoAny]);
+  }, [sheetOpen, topCard, undoAny]);
+
+  /* ── Гость закрыл шторку любым способом — значит, смотрит без входа ── */
+
+  const continueAsGuest = useCallback(() => {
+    rememberGuestContinues();
+    setGateOpen(false);
+  }, []);
 
   /* ── Экран ── */
 
@@ -261,8 +297,12 @@ export function FeedScreen() {
   const showSkeleton = feed.status === "loading" || emptyButMore;
 
   return (
-    <main className="bg-oracle grain flex min-h-[calc(100dvh-3.75rem-env(safe-area-inset-bottom))] flex-col text-white md:min-h-dvh">
-      <div className="pt-safe relative z-[1] mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-4 pb-5 sm:px-6">
+    <main className="bg-oracle grain flex min-h-[calc(100dvh-3.75rem-env(safe-area-inset-bottom))] flex-col overflow-x-clip text-white md:min-h-dvh">
+      <h1 className="sr-only">Лента прогнозов</h1>
+      <div
+        inert={sheetOpen || undefined}
+        className="pt-safe relative z-[1] mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-4 pb-5 sm:px-6"
+      >
         <FeedHeader
           me={me}
           dailyCount={dailyCount}
@@ -276,7 +316,7 @@ export function FeedScreen() {
         />
 
         <section
-          className="relative mt-4 min-h-[20rem] flex-1 md:h-[32rem] md:flex-none"
+          className="relative mt-4 min-h-[18rem] flex-1 md:h-[32rem] md:flex-none"
           aria-label="Стопка событий"
         >
           <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-10 -z-[1] opacity-20">
@@ -290,7 +330,7 @@ export function FeedScreen() {
           ) : feed.cards.length > 0 ? (
             <CardStack
               cards={feed.cards}
-              disabled={gateOpen || !!details}
+              disabled={sheetOpen}
               enterFrom={enterFrom}
               onDecide={onDecide}
               onGone={onGone}
@@ -314,7 +354,7 @@ export function FeedScreen() {
 
         <div className="mt-1">
           <SwipeButtons
-            disabled={!topCard || showSkeleton || gateOpen || !!details}
+            disabled={!topCard || showSkeleton || sheetOpen}
             onSwipe={(dir) => flyRef.current?.(dir)}
           />
         </div>
@@ -329,11 +369,8 @@ export function FeedScreen() {
         open={gateOpen}
         decision={gateDecision}
         waiting={waiting}
-        onClose={() => setGateOpen(false)}
-        onContinue={() => {
-          rememberGuestContinues();
-          setGateOpen(false);
-        }}
+        onClose={continueAsGuest}
+        onContinue={continueAsGuest}
       />
     </main>
   );

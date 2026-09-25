@@ -34,10 +34,12 @@ export function SwipeButtons({
   );
 }
 
+// На низких экранах (телефон в браузере с панелями) кнопки меньше, подписи
+// прячутся — иначе ряд уезжает под нижнюю панель.
 const RING: Record<SwipeDirection, string> = {
-  left: "size-14 border-[color:var(--color-cool)] text-[color:var(--color-cool)]",
-  right: "size-14 border-[color:var(--color-warm)] text-[color:var(--color-warm)]",
-  up: "size-12 border-[color:var(--color-edge)] text-haze",
+  left: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-cool)] text-[color:var(--color-cool)]",
+  right: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-warm)] text-[color:var(--color-warm)]",
+  up: "size-12 [@media(max-height:600px)]:size-10 border-[color:var(--color-edge)] text-haze",
 };
 
 function Round({
@@ -62,7 +64,9 @@ function Round({
       >
         {children}
       </button>
-      <span className="text-[0.7rem] font-600 text-haze-dim">{SWIPE_LABELS[dir]}</span>
+      <span className="text-[0.7rem] font-600 text-haze-dim [@media(max-height:600px)]:hidden">
+        {SWIPE_LABELS[dir]}
+      </span>
     </span>
   );
 }

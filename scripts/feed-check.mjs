@@ -1,10 +1,15 @@
 /*
  * Прогон ленты-свайпа на iPhone-вьюпорте с подменой API (бэкенд не нужен).
  *
- * Гость: первый свайп открывает вход, «Смотреть без входа» — свайпы копятся
- * в ящике. Пользователь: свайп → тост → «Отменить» без запроса, свайп → PUT
- * через окно отмены, пропуск с клавиатуры, шторка деталей, конец стопки.
- * Скриншоты и журнал — в консоль и каталог.
+ * Гость: первый свайп открывает вход, окно не расползается вширь, «Смотреть
+ * без входа» — свайпы копятся в ящике. Пользователь: свайп → тост →
+ * «Отменить» без запроса; свайп → PUT через окно отмены; пропуск с
+ * клавиатуры; «потянул, замер, отпустил» не считается; отмена во время
+ * полёта не переписывает чужой ответ; Enter на кнопке «Да» свайпает;
+ * конец стопки. Отдельно: упавшая следующая страница не порождает шторм
+ * запросов, а показывает «Проверить снова».
+ *
+ * Каждая проверка пишет ok/FAIL, код выхода 1 при любом FAIL.
  *
  *   npm i --no-save playwright && npx playwright install chromium
  *   node scripts/feed-check.mjs http://localhost:3000 /tmp/feed-check
@@ -16,6 +21,11 @@ const base = process.argv[2] || "http://localhost:3000";
 const out = process.argv[3] || "/tmp/feed-check";
 fs.mkdirSync(out, { recursive: true });
 const API = "http://localhost:8000";
+
+const check = (ok, msg) => {
+  console.log((ok ? "ok: " : "FAIL: ") + msg);
+  if (!ok) process.exitCode = 1;
+};
 
 const iso = (d) => d.toISOString();
 const now = new Date();
@@ -36,16 +46,17 @@ const card = (i, title, cat, dist, desc) => ({
   category: cat,
   crowd: { total_count: Object.values(dist).reduce((a, b) => a + b, 0), distribution: dist, mean_probability: "0.62" },
 });
-const cards = [
-  card(1, "Ключевую ставку ЦБ снизят на заседании 24 октября?", cats[0], { definitely_no: 12, probably_no: 40, fifty_fifty: 30, probably_yes: 96, definitely_yes: 36 }, "Решение по ставке принимает совет директоров Банка России. Рынок ждёт сигнала после двух пауз подряд."),
+const CARDS = [
+  card(1, "Ключевую ставку ЦБ снизят на заседании 24 октября?", cats[0], { definitely_no: 12, probably_no: 40, fifty_fifty: 30, probably_yes: 96, definitely_yes: 36 }, "Решение по ставке принимает совет директоров Банка России."),
   card(2, "«Зенит» станет чемпионом РПЛ в сезоне 2026/27?", cats[1], { definitely_no: 3, probably_no: 9, fifty_fifty: 8, probably_yes: 21, definitely_yes: 40 }, "Чемпионство определяется по итогам 30 туров."),
   card(3, "Яндекс выпустит собственный смартфон до конца года?", cats[2], {}, ""),
+  card(4, "Курс доллара опустится ниже 80 рублей к Новому году?", cats[0], { probably_no: 5, probably_yes: 7 }, ""),
 ];
+const ME = { id: "u1", username: "kalibr", display_name: "Калибр", role: "user", status: "active", needs_onboarding: false, missing_consents: [], email: "k@example.com", identity_verified: false };
 
-async function run(name, me) {
-  const browser = await chromium.launch();
-  const ctx = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" });
-  const puts = [];
+/** Подмена API. feed(cursor) → { json } | { status }. Возвращает журнал запросов. */
+async function mockApi(ctx, { me, feed }) {
+  const log = { puts: [], feed: [] };
   await ctx.route(`${API}/**`, async (route) => {
     const url = new URL(route.request().url());
     const m = route.request().method();
@@ -54,96 +65,190 @@ async function run(name, me) {
     if (p === "/auth/refresh") return route.fulfill({ status: 401, json: {} });
     if (p === "/billing/subscriptions/me") return route.fulfill({ status: 404, json: {} });
     if (p === "/categories") return route.fulfill({ json: cats });
-    if (p === "/events/feed") return route.fulfill({ json: { items: cards, next_cursor: null } });
+    if (p === "/events/feed") {
+      const cursor = url.searchParams.get("cursor");
+      log.feed.push(cursor);
+      const r = feed(cursor);
+      return r.json ? route.fulfill({ json: r.json }) : route.fulfill({ status: r.status, json: { detail: "mock" } });
+    }
     if (m === "PUT" && /^\/events\/[^/]+\/prediction$/.test(p)) {
-      puts.push({ path: p, body: route.request().postDataJSON(), at: Date.now() });
-      return route.fulfill({ json: { id: "p", user_id: "u", event_id: p.split("/")[2], confidence_grade: route.request().postDataJSON().confidence_grade, probability: "0.70", is_locked: false, brier_score: null, scored_at: null, created_at: iso(now), updated_at: iso(now) } });
+      const body = route.request().postDataJSON();
+      log.puts.push({ event: p.split("/")[2], grade: body.confidence_grade, at: Date.now() });
+      return route.fulfill({ json: { id: "p", user_id: "u", event_id: p.split("/")[2], confidence_grade: body.confidence_grade, probability: "0.70", is_locked: false, brier_score: null, scored_at: null, created_at: iso(now), updated_at: iso(now) } });
     }
     if (p === "/auth/providers") return route.fulfill({ json: { email: true, esia: false } });
     if (p === "/auth/email/request") return route.fulfill({ status: 202, body: "" });
     if (p.startsWith("/users/me/notifications")) return route.fulfill({ json: { unread: 0 } });
     return route.fulfill({ status: 404, json: { detail: "mock 404 " + p } });
   });
+  return log;
+}
+
+const singlePage = (cards) => () => ({ json: { items: cards, next_cursor: null } });
+
+async function open(browser, opts) {
+  const ctx = await browser.newContext({ ...devices["iPhone 13"], locale: "ru-RU" });
+  const log = await mockApi(ctx, opts);
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
-
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !/status of (401|404|500)/.test(msg.text())) errors.push(msg.text());
+  });
   await page.goto(`${base}/`, { waitUntil: "networkidle" });
-  await page.waitForSelector("article");
-  await page.screenshot({ path: `${out}/${name}-1-feed.png` });
-
-  const topTitle = async () => (await page.locator("article h2").first().textContent())?.trim();
-  const drag = async (dx, dy, hold = false) => {
+  await page.waitForSelector("article, [role=alert]", { timeout: 15000 });
+  const topTitle = async () => (await page.locator("article h2").first().textContent().catch(() => null))?.trim() ?? null;
+  const drag = async (dx, dy = 0, { hold = 0, steps = 14 } = {}) => {
     const box = await page.locator("article").first().boundingBox();
     const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
-    const steps = 14;
     for (let i = 1; i <= steps; i++) {
       await page.mouse.move(cx + (dx * i) / steps, cy + (dy * i) / steps);
       await page.waitForTimeout(12);
     }
-    if (hold) return;
+    if (hold) await page.waitForTimeout(hold);
     await page.mouse.up();
   };
-
-  const log = [];
-  log.push(`top: ${await topTitle()}`);
-  // 1) свайп вправо с удержанием — штамп «Да»
-  await drag(150, -10, true);
-  await page.screenshot({ path: `${out}/${name}-2-drag-right.png` });
-  await page.mouse.up();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: `${out}/${name}-3-after-right.png` });
-  log.push(`after right, top: ${await topTitle()}`);
-  log.push(`toast: ${(await page.locator('[role="status"]').allTextContents()).join(" | ")}`);
-  if (me) {
-    // undo → карточка вернулась, PUT не ушёл
-    await page.getByRole("button", { name: "Отменить" }).click();
-    await page.waitForTimeout(500);
-    log.push(`after undo, top: ${await topTitle()}`);
-    await page.waitForTimeout(4500);
-    log.push(`puts after undo+4.5s: ${puts.length}`);
-    // свайп влево → через 4 с PUT probably_no
-    await drag(-170, 0);
-    await page.waitForTimeout(4600);
-    log.push(`puts after left+4.6s: ${JSON.stringify(puts.map((p) => [p.path, p.body]))}`);
-    // клавиатура: вверх = пропуск
-    await page.keyboard.press("ArrowUp");
-    await page.waitForTimeout(500);
-    log.push(`after ArrowUp, top: ${await topTitle()}`);
-    await page.screenshot({ path: `${out}/${name}-4-after-skip.png` });
-    // подсказка «на домашний экран» (iOS, через 12 с) стоит сверху — закрываем, как сделал бы человек
+  const dismissInstallHint = async () => {
     const later = page.getByRole("button", { name: "Не сейчас" });
     if (await later.count()) await later.click();
-    // детали
-    await page.getByRole("button", { name: "Подробнее" }).first().click();
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: `${out}/${name}-5-details.png` });
-    await page.keyboard.press("Escape");
-    // кнопка «Да» → последняя карточка → конец стопки
-    await page.getByRole("button", { name: "Да", exact: true }).click();
-    await page.waitForTimeout(600);
-    await page.screenshot({ path: `${out}/${name}-6-end.png` });
-    log.push(`end text: ${(await page.locator("main").textContent())?.includes("больше нет") ? "end-of-stack shown" : "no end state"}`);
-  } else {
-    // гость: первый свайп → шторка входа, карточка на месте
-    await page.screenshot({ path: `${out}/${name}-4-gate.png` });
-    log.push(`gate: ${await page.locator('[role="dialog"]').count()} dialog(s), top: ${await topTitle()}`);
-    await page.getByRole("button", { name: "Смотреть без входа" }).click();
-    await page.waitForTimeout(300);
-    await drag(170, 0);
-    await page.waitForTimeout(600);
-    log.push(`guest after 2nd swipe, top: ${await topTitle()}`);
-    await page.screenshot({ path: `${out}/${name}-5-waiting.png` });
-    log.push(`header: ${(await page.locator("header").textContent())?.trim().slice(0, 120)}`);
-    log.push(`outbox: ${await page.evaluate(() => localStorage.getItem("veraks.feed.outbox"))}`);
-  }
-  log.push(`page errors: ${errors.length ? errors.join(" || ") : "none"}`);
-  console.log(`\n=== ${name}\n` + log.join("\n"));
-  await browser.close();
+  };
+  return { ctx, page, log, errors, topTitle, drag, dismissInstallHint };
 }
 
-await run("guest", null);
-await run("user", { id: "u1", username: "kalibr", display_name: "Калибр", role: "user", status: "active", needs_onboarding: false, missing_consents: [], email: "k@example.com", identity_verified: false });
+const browser = await chromium.launch();
+
+/* ── Гость ── */
+{
+  console.log("\n=== guest");
+  const s = await open(browser, { me: null, feed: singlePage(CARDS) });
+  const { page } = s;
+  const first = await s.topTitle();
+  check(first === CARDS[0].title, `верхняя карточка: ${first}`);
+  await page.screenshot({ path: `${out}/guest-1-feed.png` });
+  await s.drag(150, -10, { hold: 1 });
+  await page.screenshot({ path: `${out}/guest-2-drag-right.png` });
+  await page.waitForTimeout(400);
+  check((await page.locator('[role="dialog"]').count()) === 1, "первый свайп гостя открыл шторку входа");
+  check((await s.topTitle()) === first, "карточка гостя осталась на месте");
+  const vw = await page.evaluate(() => innerWidth);
+  check(vw === 390, `окно не расползлось вширь при открытой шторке (innerWidth=${vw})`);
+  check((await page.evaluate(() => document.documentElement.scrollWidth)) <= 390, "нет горизонтального overflow");
+  await page.screenshot({ path: `${out}/guest-3-gate.png` });
+  const cont = page.getByRole("button", { name: "Смотреть без входа" });
+  await cont.click({ timeout: 5000 }).then(() => check(true, "«Смотреть без входа» нажалась"), () => check(false, "«Смотреть без входа» не нажалась"));
+  await page.waitForTimeout(300);
+  await s.drag(170);
+  await page.waitForTimeout(600);
+  check((await s.topTitle()) === CARDS[1].title, "после «смотреть без входа» свайп улетает");
+  const outbox = await page.evaluate(() => JSON.parse(localStorage.getItem("veraks.feed.outbox") || "[]"));
+  check(outbox.length === 1 && outbox[0].owner === "guest" && outbox[0].grade === "probably_yes", `ящик гостя: ${JSON.stringify(outbox.map((e) => [e.eventId, e.grade, e.owner]))}`);
+  check(/1 ответ ждёт входа/.test(await page.locator("header").textContent()), "в шапке «1 ответ ждёт входа»");
+  await page.screenshot({ path: `${out}/guest-4-waiting.png` });
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+/* ── Пользователь ── */
+{
+  console.log("\n=== user");
+  const s = await open(browser, { me: ME, feed: singlePage(CARDS) });
+  const { page, log } = s;
+  await page.screenshot({ path: `${out}/user-1-feed.png` });
+
+  // свайп вправо → следующая карточка, тост с отменой
+  await s.drag(150, -10);
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === CARDS[1].title, "свайп вправо: следующая карточка наверху");
+  check((await page.getByRole("button", { name: "Отменить" }).count()) === 1, "тост с «Отменить» показан");
+  await page.screenshot({ path: `${out}/user-2-after-right.png` });
+
+  // отмена → карточка вернулась, PUT не ушёл
+  await page.getByRole("button", { name: "Отменить" }).click();
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === CARDS[0].title, "отмена вернула карточку");
+  await page.waitForTimeout(4500);
+  check(log.puts.length === 0, `после отмены запросов нет (${log.puts.length})`);
+
+  // детали
+  await s.dismissInstallHint();
+  await page.getByRole("button", { name: "Подробнее" }).first().click();
+  await page.waitForTimeout(300);
+  check((await page.locator('[role="dialog"]').count()) === 1, "шторка деталей открылась");
+  check(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]')), "фокус внутри шторки");
+  await page.screenshot({ path: `${out}/user-3-details.png` });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+  check((await page.locator('[role="dialog"]').count()) === 0, "Esc закрыл шторку");
+
+  // свайп влево → PUT probably_no через окно отмены
+  await s.drag(-170);
+  await page.waitForTimeout(4600);
+  check(log.puts.length === 1 && log.puts[0].event === "e1" && log.puts[0].grade === "probably_no", `свайп влево записан: ${JSON.stringify(log.puts)}`);
+
+  // пропуск с клавиатуры
+  await page.keyboard.press("ArrowUp");
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === CARDS[2].title, "ArrowUp пропустил карточку");
+
+  // потянул, замер, отпустил — не считается
+  await s.drag(100, 0, { hold: 1200, steps: 4 });
+  await page.waitForTimeout(400);
+  check((await s.topTitle()) === CARDS[2].title, "«потянул, замер, отпустил» — карточка на месте");
+
+  // отмена во время полёта не переписывает ответ
+  await s.drag(170);
+  await page.waitForTimeout(50);
+  const undo = page.getByRole("button", { name: "Отменить" });
+  if (await undo.count()) await undo.click({ timeout: 1000 }).catch(() => {});
+  await page.waitForTimeout(600);
+  const topAfterFlight = await s.topTitle();
+  check(topAfterFlight === CARDS[3].title || topAfterFlight === CARDS[2].title, `после отмены в полёте стопка согласована (top: ${topAfterFlight})`);
+  await page.waitForTimeout(4600);
+  const wrong = log.puts.filter((p) => (p.event === "e3" && p.grade !== "probably_yes") || p.event === "e2" || p.event === "e4");
+  check(wrong.length === 0, `ни одного чужого/неверного PUT: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
+  if (topAfterFlight === CARDS[2].title) {
+    await s.drag(170);
+    await page.waitForTimeout(600);
+  }
+
+  // Enter на сфокусированной кнопке «Да» — свайп, а не детали
+  await page.getByRole("button", { name: "Да", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(600);
+  check((await page.locator('[role="dialog"]').count()) === 0, "Enter на кнопке не открыл детали");
+  check((await page.locator("article").count()) === 0, "Enter на «Да» свайпнул последнюю карточку");
+  check(/больше нет/.test(await page.locator("main").textContent()), "показан конец стопки");
+  await page.screenshot({ path: `${out}/user-4-end.png` });
+  await page.waitForTimeout(4600);
+  const e4 = log.puts.find((p) => p.event === "e4");
+  check(e4?.grade === "probably_yes", `последний свайп записан как probably_yes (${JSON.stringify(e4)})`);
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+/* ── Упавшая следующая страница ── */
+{
+  console.log("\n=== next page fails");
+  const s = await open(browser, {
+    me: ME,
+    feed: (cursor) => (cursor ? { status: 500 } : { json: { items: CARDS.slice(0, 2), next_cursor: "c1" } }),
+  });
+  const { page, log } = s;
+  await page.waitForTimeout(2500);
+  const withCursor = log.feed.filter((c) => c === "c1").length;
+  check(withCursor <= 2, `упавший курсор не долбится (запросов с курсором: ${withCursor})`);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(600);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(1500);
+  check((await page.getByRole("button", { name: "Проверить снова" }).count()) === 1, "стопка пуста → «Проверить снова»");
+  check(log.feed.filter((c) => c === "c1").length <= 2, `и после опустошения стопки повторов нет (${log.feed.filter((c) => c === "c1").length})`);
+  await page.screenshot({ path: `${out}/retry-1-error.png` });
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+await browser.close();
+console.log(process.exitCode ? "\nЕСТЬ ПАДЕНИЯ" : "\nВсе проверки пройдены");

@@ -46,6 +46,8 @@ const SETTLE_MS = 220;
 const MAX_ROTATE_DEG = 12;
 /** px/ms — резкий короткий взмах засчитывается и без полного расстояния. */
 const FLICK_VELOCITY = 0.6;
+/** Скорость считается по движению за последние миллисекунды, а не за весь жест. */
+const VELOCITY_WINDOW_MS = 100;
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -70,11 +72,14 @@ export const swipeBaseStyle: CSSProperties = {
   willChange: "transform",
 };
 
+type Sample = { x: number; y: number; t: number };
+
 export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null }: Options) {
   const ref = useRef<HTMLDivElement>(null);
   const phase = useRef<Phase>("idle");
+  const flying = useRef<SwipeDirection | null>(null);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
-  const samples = useRef<{ x: number; y: number; t: number }[]>([]);
+  const samples = useRef<Sample[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decide = useRef(onDecide);
   const gone = useRef(onGone);
@@ -91,19 +96,22 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
     el.style.setProperty("--swipe-up", String(up));
   }, []);
 
-  /** Один раз: по transitionend или по таймеру — что раньше. */
+  /** Один раз: по концу перехода transform самого элемента или по таймеру — что раньше. */
   const after = useCallback((ms: number, fn: () => void) => {
     const el = ref.current;
     let done = false;
     const run = () => {
       if (done) return;
       done = true;
-      el?.removeEventListener("transitionend", run);
+      el?.removeEventListener("transitionend", onEnd);
       if (timer.current) clearTimeout(timer.current);
       timer.current = null;
       fn();
     };
-    el?.addEventListener("transitionend", run);
+    const onEnd = (ev: TransitionEvent) => {
+      if (ev.target === el && ev.propertyName === "transform") run();
+    };
+    el?.addEventListener("transitionend", onEnd);
     timer.current = setTimeout(run, ms + 60);
   }, []);
 
@@ -125,11 +133,13 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
       const el = ref.current;
       if (!el) return;
       phase.current = "flying";
+      flying.current = dir;
       setVars(dir === "left" ? 1 : 0, dir === "right" ? 1 : 0, dir === "up" ? 1 : 0);
       const to = offscreen(dir);
       const target = `translate3d(${to.x}px, ${to.y}px, 0) rotate(${to.rot}deg)`;
       const finish = () => {
         phase.current = "idle";
+        flying.current = null;
         gone.current(dir);
       };
       if (reducedMotion()) {
@@ -160,15 +170,17 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
     [setVars],
   );
 
-  const judge = useCallback((dx: number, dy: number): SwipeDirection | null => {
+  /** Решение по отпусканию: расстояние или скорость за последние VELOCITY_WINDOW_MS. */
+  const judge = useCallback((dx: number, dy: number, release: Sample): SwipeDirection | null => {
     const el = ref.current;
     if (!el) return null;
-    const s = samples.current;
-    const first = s[0];
-    const last = s[s.length - 1];
-    const dt = first && last ? Math.max(1, last.t - first.t) : 1;
-    const vx = first && last ? (last.x - first.x) / dt : 0;
-    const vy = first && last ? (last.y - first.y) / dt : 0;
+    // Замер только по свежим точкам: если палец замер и потом отпустил,
+    // старый разгон не должен уносить карточку.
+    const recent = [...samples.current.filter((p) => release.t - p.t < VELOCITY_WINDOW_MS), release];
+    const first = recent[0];
+    const dt = Math.max(1, release.t - first.t);
+    const vx = recent.length > 1 ? (release.x - first.x) / dt : 0;
+    const vy = recent.length > 1 ? (release.y - first.y) / dt : 0;
     const w = el.offsetWidth;
     const t = 0.35 * w;
     const tUp = 0.3 * el.offsetHeight;
@@ -198,8 +210,10 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
       const dx = e.clientX - s.x;
       const dy = e.clientY - s.y;
       const now = performance.now();
-      // Скорость — по последним ~100 мс, а не от самого начала жеста.
-      samples.current = [...samples.current.filter((p) => now - p.t < 100), { x: e.clientX, y: e.clientY, t: now }];
+      samples.current = [
+        ...samples.current.filter((p) => now - p.t < VELOCITY_WINDOW_MS),
+        { x: e.clientX, y: e.clientY, t: now },
+      ];
       if (phase.current === "armed") {
         if (Math.hypot(dx, dy) < DRAG_START_PX) return;
         phase.current = "dragging";
@@ -220,7 +234,8 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
         phase.current = "idle"; // тап без сдвига — ничего
         return;
       }
-      const dir = judge(e.clientX - s.x, e.clientY - s.y);
+      const release = { x: e.clientX, y: e.clientY, t: performance.now() };
+      const dir = judge(e.clientX - s.x, e.clientY - s.y, release);
       if (dir && decide.current(dir) !== false) flyTo(dir);
       else settle();
     },
@@ -268,9 +283,17 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Карточку размонтировали посреди полёта (сменили категорию, дозаписался
+  // ящик): человек видел, как она улетела, — решение не должно пропасть.
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
+      if (flying.current) {
+        const dir = flying.current;
+        flying.current = null;
+        phase.current = "idle";
+        gone.current(dir);
+      }
     },
     [],
   );

@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { tryRefresh } from "@/lib/api/client";
 import { withNext } from "@/lib/returnTo";
+import { forgetUserOutbox } from "@/lib/feedStorage";
 import type { ApiMe } from "@/lib/api/dto";
 
 interface AuthState {
@@ -48,7 +49,7 @@ function OnboardingReminder({ next }: { next: string }) {
   return (
     <div
       role="status"
-      className="bg-[color:var(--color-signal)]/12 px-4 py-2 text-center text-sm text-[color:var(--color-signal-deep)]"
+      className="pt-safe bg-[color:var(--color-signal)]/12 px-4 py-2 text-center text-sm text-[color:var(--color-signal-deep)]"
     >
       Регистрация не завершена: примите условия и выберите псевдоним, чтобы
       делать прогнозы.{" "}
@@ -100,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setMe(null);
     setSubscribed(false);
+    // Ответы этой учётки, ждавшие отправки на этом устройстве, никому больше
+    // не принадлежат — под следующего вошедшего они уйти не должны.
+    forgetUserOutbox();
   }, []);
 
   // Самостоятельное удаление аккаунта (152-ФЗ). В отличие от signOut ошибку

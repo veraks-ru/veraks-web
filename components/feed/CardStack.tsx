@@ -7,7 +7,11 @@ import { SwipeCard } from "./SwipeCard";
 
 const VISIBLE = 3;
 
-/** Стопка: три карточки, верхняя с жестом. Ключ — id, чтобы при сдвиге стопки карточка поднималась, а не перерисовывалась. */
+/**
+ * Стопка: три карточки, верхняя с жестом. Ключ — id, чтобы при сдвиге стопки
+ * карточка поднималась, а не перерисовывалась. Колбэки получают саму
+ * карточку: решение принадлежит ей, а не «верхней на момент вызова».
+ */
 export function CardStack({
   cards,
   disabled,
@@ -20,8 +24,8 @@ export function CardStack({
   cards: FeedCard[];
   disabled: boolean;
   enterFrom: SwipeDirection | null;
-  onDecide: (dir: SwipeDirection) => boolean | void;
-  onGone: (dir: SwipeDirection) => void;
+  onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
+  onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: (card: FeedCard) => void;
   flyRef: MutableRefObject<((dir: SwipeDirection) => void) | null>;
 }) {

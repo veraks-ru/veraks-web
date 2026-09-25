@@ -97,7 +97,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`min-h-9 rounded-full px-3.5 text-sm font-600 transition-colors ${
+      className={`min-h-10 rounded-full px-3.5 text-sm font-600 transition-colors ${
         on ? "bg-white text-ink-3" : "border border-[color:var(--color-edge)] text-haze hover:text-white"
       }`}
     >

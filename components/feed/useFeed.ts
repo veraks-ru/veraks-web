@@ -11,12 +11,19 @@ import type { FeedCard } from "@/lib/types";
 export type FeedStatus = "loading" | "ready" | "error";
 export type FeedError = "network" | "generic";
 
+const errorKind = (e: unknown): FeedError =>
+  e instanceof ApiError && e.code === "network" ? "network" : "generic";
+
 /**
  * Данные ленты: страницы по курсору, подгрузка заранее, пропуски.
  *
  * Сервер уже исключает события, по которым вошедший высказался; клиент сверху
  * вычитает пропущенные в этой сессии и те, что свайпнули только что (их
  * отправка ещё может быть в очереди, а страница — перезапрошена).
+ *
+ * Неудачная подгрузка следующей страницы запоминается по курсору и не
+ * повторяется сама: иначе при сбое API лента била бы в него без остановки.
+ * Повтор — по «Проверить снова», когда стопка опустела.
  */
 export function useFeed({
   viewerKey,
@@ -31,6 +38,7 @@ export function useFeed({
   const [cards, setCards] = useState<FeedCard[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [failed, setFailed] = useState<{ cursor: string; kind: FeedError } | null>(null);
   const [skippedCount, setSkippedCount] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -55,13 +63,16 @@ export function useFeed({
   );
 
   // Первая страница — заново при смене зрителя (гость ↔ пользователь),
-  // категории или по требованию.
+  // категории или по требованию. Всё состояние подгрузки сбрасывается тоже:
+  // иначе прерванная сменой подгрузка оставила бы loadingMore навсегда.
   useEffect(() => {
     const token = ++request.current;
     setStatus("loading");
     setError(null);
     setCards([]);
     setNextCursor(null);
+    setLoadingMore(false);
+    setFailed(null);
     if (viewerKey === null) return;
     (async () => {
       try {
@@ -72,7 +83,7 @@ export function useFeed({
         setStatus("ready");
       } catch (e) {
         if (token !== request.current) return;
-        setError(e instanceof ApiError && e.code === "network" ? "network" : "generic");
+        setError(errorKind(e));
         setStatus("error");
       }
     })();
@@ -81,28 +92,36 @@ export function useFeed({
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
     const token = request.current;
+    const cursor = nextCursor;
     setLoadingMore(true);
     try {
-      const res = await fetchPage(nextCursor, token);
+      const res = await fetchPage(cursor, token);
       if (!res) return;
       setCards((prev) => {
         const seen = new Set(prev.map((c) => c.id));
         return [...prev, ...res.fresh.filter((c) => !seen.has(c.id))];
       });
       setNextCursor(res.next);
-    } catch {
-      // Следующую страницу не дотянули — попробуем, когда стопка снова
-      // опустеет; текущие карточки и так на месте.
+    } catch (e) {
+      if (token === request.current) setFailed({ cursor, kind: errorKind(e) });
     } finally {
       if (token === request.current) setLoadingMore(false);
     }
   }, [nextCursor, loadingMore, fetchPage]);
 
   useEffect(() => {
-    if (status === "ready" && cards.length <= PREFETCH_AT && nextCursor && !loadingMore) {
-      void loadMore();
+    if (status !== "ready" || !nextCursor || loadingMore) return;
+    if (failed?.cursor === nextCursor) {
+      // Курсор уже подвёл — не долбим API. Когда карточки кончились, честно
+      // показываем сбой с кнопкой повтора.
+      if (cards.length === 0) {
+        setError(failed.kind);
+        setStatus("error");
+      }
+      return;
     }
-  }, [status, cards.length, nextCursor, loadingMore, loadMore]);
+    if (cards.length <= PREFETCH_AT) void loadMore();
+  }, [status, cards.length, nextCursor, loadingMore, failed, loadMore]);
 
   /** Верхняя карточка ушла (свайп решён) — помним, чтобы не вернулась с перезапросом. */
   const remove = useCallback((id: string) => {

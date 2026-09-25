@@ -31,15 +31,15 @@ export function SwipeCard({
   depth: number;
   disabled: boolean;
   enterFrom: SwipeDirection | null;
-  onDecide: (dir: SwipeDirection) => boolean | void;
-  onGone: (dir: SwipeDirection) => void;
+  onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
+  onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: () => void;
   /** Экран дёргает верхнюю карточку с клавиатуры и кнопок через этот ref. */
   flyRef: MutableRefObject<((dir: SwipeDirection) => void) | null>;
 }) {
   const swipe = useSwipe({
-    onDecide,
-    onGone,
+    onDecide: (dir) => onDecide(dir, card),
+    onGone: (dir) => onGone(dir, card),
     disabled: disabled || !top,
     enterFrom: top ? enterFrom : null,
   });
@@ -73,6 +73,7 @@ export function SwipeCard({
       ref={swipe.ref}
       {...(top ? swipe.handlers : {})}
       aria-hidden={!top}
+      inert={!top || undefined}
       className="absolute inset-0 transition-[transform,opacity] duration-200"
       style={{ ...(top ? swipeBaseStyle : {}), ...stacked, zIndex: 3 - depth }}
     >
@@ -87,7 +88,7 @@ export function SwipeCard({
               type="button"
               onClick={onDetails}
               aria-label="Подробнее"
-              className="flex size-9 items-center justify-center rounded-full border border-[color:var(--color-edge)] text-signal"
+              className="-my-1 flex size-11 items-center justify-center rounded-full border border-[color:var(--color-edge)] text-signal"
             >
               <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
                 <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.75" />
