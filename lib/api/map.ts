@@ -4,9 +4,16 @@
 // принимается бэкендом, так что раньше разосланные ссылки не ломаются.
 
 import { GRADES, type ConfidenceGrade } from "@/lib/confidence";
-import type { CategoryStat, EventStatus, PredictionEvent, ScopeRatingStat } from "@/lib/types";
+import type {
+  CategoryStat,
+  EventStatus,
+  FeedCard,
+  PredictionEvent,
+  ScopeRatingStat,
+} from "@/lib/types";
 import type {
   ApiEvent,
+  ApiEventFeedItem,
   ApiEventStatus,
   ApiPrediction,
   ApiPredictionSummary,
@@ -27,9 +34,9 @@ export function mapStatus(s: ApiEventStatus): EventStatus {
   return s;
 }
 
-/** Распределение из summary → counts[5] в порядке градаций. */
+/** Распределение из summary (или сводки внутри карточки ленты) → counts[5] в порядке градаций. */
 export function distributionToCounts(
-  summary: ApiPredictionSummary | null,
+  summary: Pick<ApiPredictionSummary, "distribution"> | null,
 ): [number, number, number, number, number] {
   const c: [number, number, number, number, number] = [0, 0, 0, 0, 0];
   if (!summary) return c;
@@ -68,6 +75,25 @@ export function toPredictionEvent(
     outcome: ev.outcome ?? undefined,
     resolvedAt: ev.resolved_at ?? undefined,
     disputeWindowEndsAt: ev.dispute_window_ends_at ?? undefined,
+  };
+}
+
+/** Карточка ленты-свайпа: сводка и категория уже внутри ответа, без доп. запросов. */
+export function toFeedCard(item: ApiEventFeedItem): FeedCard {
+  const counts = distributionToCounts(item.crowd);
+  return {
+    id: item.id,
+    slug: item.public_code,
+    title: item.title,
+    description: item.description,
+    resolutionSource: item.resolution_source,
+    resolutionCriteria: item.resolution_criteria,
+    category: { id: item.category.id, slug: item.category.slug, title: item.category.title },
+    opensAt: item.opens_at,
+    closesAt: item.closes_at,
+    resolvesAt: item.resolves_at,
+    crowd: { counts },
+    forecasters: item.crowd.total_count,
   };
 }
 

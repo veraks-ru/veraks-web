@@ -21,7 +21,7 @@ export function ShareEventButton({
   event,
   tone = "light",
 }: {
-  event: PredictionEvent;
+  event: Pick<PredictionEvent, "slug" | "title">;
   tone?: "light" | "dark";
 }) {
   const [copied, setCopied] = useState(false);

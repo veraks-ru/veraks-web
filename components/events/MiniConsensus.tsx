@@ -7,19 +7,24 @@ import type { ConfidenceGrade, CrowdDistribution } from "@/lib/types";
  * числе пока приём открыт и до собственного прогноза: публичный ответ на
  * вопрос «во что верят люди» — то, ради чего на площадку заходят и те, кто
  * сам не прогнозирует. mine — подсветить столбец пользователя.
+ * tone — среда: подписи на светлом «приборе» и на тёмном экране разные.
  */
 export function MiniConsensus({
   crowd,
   mine,
   labelled = false,
+  tone = "light",
 }: {
   crowd: CrowdDistribution;
   mine?: ConfidenceGrade | null;
   labelled?: boolean;
+  tone?: "light" | "dark";
 }) {
   const shares = crowdShares(crowd);
   const max = Math.max(...shares, 0.0001);
   const mineIdx = mine ? indexOfGrade(mine) : -1;
+  const muted = tone === "dark" ? "text-haze" : "text-slate";
+  const strong = tone === "dark" ? "text-white" : "text-graphite";
 
   return (
     <div>
@@ -45,15 +50,15 @@ export function MiniConsensus({
       </div>
 
       {labelled && (
-        <div className="mt-1.5 flex justify-between text-[0.62rem] font-500 text-slate">
+        <div className={`mt-1.5 flex justify-between text-[0.62rem] font-500 ${muted}`}>
           <span>Точно нет</span>
           <span>Точно да</span>
         </div>
       )}
 
-      <p className="mt-2 text-xs text-slate">
+      <p className={`mt-2 text-xs ${muted}`}>
         Толпа склоняется:{" "}
-        <span className="font-700 text-graphite">{crowdReadingLabel(crowd)}</span>
+        <span className={`font-700 ${strong}`}>{crowdReadingLabel(crowd)}</span>
       </p>
     </div>
   );

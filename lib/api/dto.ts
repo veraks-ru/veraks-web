@@ -500,3 +500,30 @@ export interface ApiAccessGrant {
   expires_at: string | null;
   granted_at: string;
 }
+
+/* ── Лента открытых событий для свайпа: GET /events/feed ── */
+
+export interface ApiEventFeedCategory {
+  id: string;
+  slug: string;
+  title: string;
+}
+
+/** Сводка толпы, встроенная в карточку ленты (без отдельного запроса). */
+export interface ApiEventFeedCrowd {
+  total_count: number;
+  distribution: Partial<Record<ConfidenceGrade, number>>;
+  mean_probability: string | null;
+}
+
+// Имя с префиксом EventFeed: ApiFeedItem уже занят социальной лентой /feed.
+export interface ApiEventFeedItem extends ApiEvent {
+  category: ApiEventFeedCategory;
+  crowd: ApiEventFeedCrowd;
+}
+
+export interface ApiEventFeedPage {
+  items: ApiEventFeedItem[];
+  /** Непрозрачный курсор следующей страницы; null — страница последняя. */
+  next_cursor: string | null;
+}

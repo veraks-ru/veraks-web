@@ -16,6 +16,7 @@ import type {
   ApiDivisionStandings,
   ApiIssuedKey,
   ApiEvent,
+  ApiEventFeedPage,
   ApiEventStatus,
   ApiFeedItem,
   ApiLeaderboard,
@@ -66,7 +67,7 @@ export function listEvents(params: {
 export const getEvent = (id: string) =>
   apiFetch<ApiEvent>(`/events/${id}`, { allow: [404, 422] });
 
-/** Сводка толпы. Скрыта до закрытия приёма → null на 409/404. */
+/** Сводка толпы. Видна всем и всегда; null на 404 (нет события) и 409 (аннулировано). */
 export const getPredictionSummary = (id: string) =>
   apiFetch<ApiPredictionSummary>(`/events/${id}/predictions/summary`, {
     allow: [404, 409],
@@ -81,12 +82,41 @@ export const getEventTopPredictions = (id: string, limit = 10) =>
     allow: [404, 409],
   });
 
+/**
+ * Лента открытых событий для свайпа: только те, что принимают прогнозы прямо
+ * сейчас и по которым вошедший ещё не высказался; сводка толпы и категория
+ * приходят внутри карточки. Курсор непрозрачный — отдаём обратно как есть.
+ */
+export function getEventFeed(params: {
+  cursor?: string | null;
+  categoryId?: string | null;
+  limit?: number;
+} = {}): Promise<ApiEventFeedPage | null> {
+  const q = new URLSearchParams();
+  if (params.cursor) q.set("cursor", params.cursor);
+  if (params.categoryId) q.set("category_id", params.categoryId);
+  q.set("limit", String(params.limit ?? 20));
+  return apiFetch<ApiEventFeedPage>(`/events/feed?${q.toString()}`);
+}
+
 /* ── Прогнозы ── */
 
 export const putPrediction = (eventId: string, grade: ConfidenceGrade) =>
   apiFetch<ApiPrediction>(`/events/${eventId}/prediction`, {
     method: "PUT",
     body: { confidence_grade: grade },
+  });
+
+/**
+ * Тот же PUT, но переживающий уход со страницы (keepalive) — для сброса
+ * очереди отложенных свайпов на pagehide. Через тихое обновление сессии
+ * такой запрос не проходит: ответа никто не ждёт.
+ */
+export const putPredictionKeepalive = (eventId: string, grade: ConfidenceGrade) =>
+  apiFetch<ApiPrediction>(`/events/${eventId}/prediction`, {
+    method: "PUT",
+    body: { confidence_grade: grade },
+    keepalive: true,
   });
 
 export const getMyPrediction = (eventId: string) =>
@@ -121,8 +151,13 @@ export const getAuthProviders = () => apiFetch<ApiAuthProviders>("/auth/provider
 // Всегда 202 (анти-энумерация: одинаковый ответ независимо от того,
 // зарегистрирован адрес). Ошибки — 422 (формат) и 429 (лимит) — бросаются
 // как ApiError, их разбирает вызывающий экран.
-export const requestEmailLink = (email: string) =>
-  apiFetch<null>("/auth/email/request", { method: "POST", body: { email } });
+// next — относительный путь, куда вернуть человека после перехода по ссылке
+// из письма (например, в ленту); бэкенд валидирует и вшивает его в ссылку.
+export const requestEmailLink = (email: string, next?: string | null) =>
+  apiFetch<null>("/auth/email/request", {
+    method: "POST",
+    body: next ? { email, next } : { email },
+  });
 
 // 401 — ссылка устарела/использована/неизвестна, 403 — аккаунт удалён/заблокирован.
 export const completeEmailLogin = (token: string) =>

@@ -21,6 +21,11 @@ interface Options {
   /** не бросать на этих статусах — вернуть null (например, 401/404) */
   allow?: number[];
   signal?: AbortSignal;
+  /**
+   * Дожить до ответа после ухода со страницы (pagehide): браузер не оборвёт
+   * запрос вместе с вкладкой. Тело — до 64 КБ, для PUT прогноза с запасом.
+   */
+  keepalive?: boolean;
 }
 
 // Ротация access-токена: при 401 один раз пробуем POST /auth/refresh и
@@ -124,6 +129,7 @@ async function rawFetch(path: string, opts: Options): Promise<Response> {
       headers: opts.body ? { "Content-Type": "application/json" } : undefined,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
       signal: opts.signal,
+      keepalive: opts.keepalive,
     });
   } catch {
     throw new ApiError(0, "Сеть недоступна", "network");

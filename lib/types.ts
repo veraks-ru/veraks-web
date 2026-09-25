@@ -44,6 +44,22 @@ export interface PredictionEvent {
   disputeWindowEndsAt?: string;
 }
 
+/** Карточка ленты-свайпа: открытое событие со встроенной сводкой толпы. */
+export interface FeedCard {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  resolutionSource: string;
+  resolutionCriteria: string;
+  category: { id: string; slug: string; title: string };
+  opensAt: string;
+  closesAt: string;
+  resolvesAt: string;
+  crowd: CrowdDistribution;
+  forecasters: number;
+}
+
 /* ───────────────────── Профиль и рейтинги ───────────────────── */
 
 /** Один бакет калибровки = одна градация. actual = nYes / nResolved. */
