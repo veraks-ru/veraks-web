@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/endpoints";
 import Link from "next/link";
 import { tryRefresh } from "@/lib/api/client";
+import { withNext } from "@/lib/returnTo";
 import type { ApiMe } from "@/lib/api/dto";
 
 interface AuthState {
@@ -43,7 +44,7 @@ function isOnboardingExempt(pathname: string): boolean {
 }
 
 /** Полоса-напоминание: онбординг не завершён, участие пока закрыто. */
-function OnboardingReminder() {
+function OnboardingReminder({ next }: { next: string }) {
   return (
     <div
       role="status"
@@ -51,7 +52,7 @@ function OnboardingReminder() {
     >
       Регистрация не завершена: примите условия и выберите псевдоним, чтобы
       делать прогнозы.{" "}
-      <Link href="/onboarding" className="font-600 underline">
+      <Link href={withNext("/onboarding", next)} className="font-600 underline">
         Завершить
       </Link>
     </div>
@@ -126,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{ me, subscribed, loading, refresh, signOut, deleteAccount }}
     >
-      {showOnboardingReminder ? <OnboardingReminder /> : null}
+      {showOnboardingReminder ? <OnboardingReminder next={pathname ?? "/"} /> : null}
       {children}
     </AuthContext.Provider>
   );

@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ApiError } from "@/lib/api/client";
 import { completeEmailLogin } from "@/lib/api/endpoints";
+import { safeReturnPath, withNext } from "@/lib/returnTo";
 import { useAuth } from "@/components/app/AuthProvider";
 
 type Failure = { title: string; detail: string; cta?: { label: string; href: string } };
@@ -22,6 +23,9 @@ function CallbackInner() {
     if (ran.current) return;
     ran.current = true;
     const token = params.get("token");
+    // Куда вернуть после входа — бэкенд вшил в ссылку то, что просил экран
+    // входа (например, ленту). Проверяем сами: ссылку могли подправить.
+    const next = safeReturnPath(params.get("next"));
     if (!token) {
       setError({ title: "Не удалось войти", detail: "В ссылке нет токена входа — проверьте, что она скопирована полностью." });
       return;
@@ -31,13 +35,13 @@ function CallbackInner() {
         // Обмен токена на сессию: бэкенд ставит httpOnly-cookie в этом ответе.
         await completeEmailLogin(token);
         const me = await refresh();
-        router.replace(me?.needs_onboarding ? "/onboarding" : "/account");
+        router.replace(me?.needs_onboarding ? withNext("/onboarding", next) : (next ?? "/account"));
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) {
           setError({
             title: "Ссылка устарела или уже использована",
             detail: "Ссылки для входа действуют 15 минут и работают один раз. Запросите новую.",
-            cta: { label: "Получить новую ссылку", href: "/join" },
+            cta: { label: "Получить новую ссылку", href: withNext("/join", next) },
           });
         } else if (e instanceof ApiError && e.status === 403) {
           setError({ title: "Вход невозможен", detail: e.message });

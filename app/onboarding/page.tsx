@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -11,6 +11,7 @@ import { submitOnboarding } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { CONSENT_DOCUMENT_SLUGS, consentDocTitle } from "@/lib/legal";
 import { USERNAME_RE } from "@/lib/validation";
+import { safeReturnPath, withNext } from "@/lib/returnTo";
 
 const inputCls =
   "w-full rounded-xl border border-[color:var(--color-edge)] bg-[color:var(--color-ink-3)]/60 " +
@@ -37,9 +38,12 @@ function consentCopy(document: string): { lead: string; linkText: string } {
   );
 }
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const { me, loading, refresh } = useAuth();
   const router = useRouter();
+  // Откуда пришли (лента, событие) — туда и вернём после согласий.
+  const params = useSearchParams();
+  const next = safeReturnPath(params.get("next"));
 
   const [initialized, setInitialized] = useState(false);
   const [username, setUsername] = useState("");
@@ -52,13 +56,13 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (loading) return;
     if (!me) {
-      router.replace("/join");
+      router.replace(withNext("/join", next));
       return;
     }
     if (!me.needs_onboarding) {
-      router.replace("/events");
+      router.replace(next ?? "/events");
     }
-  }, [loading, me, router]);
+  }, [loading, me, router, next]);
 
   // Предзаполняем форму текущими значениями один раз, когда они пришли —
   // без этого печатать в полях было бы невозможно (me обновляется извне).
@@ -104,7 +108,7 @@ export default function OnboardingPage() {
       // предположению, что успешная отправка формы сразу закрывает онбординг
       // (могут остаться другие незавершённые требования).
       if (!updated.needs_onboarding) {
-        router.replace("/events");
+        router.replace(next ?? "/events");
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -236,5 +240,14 @@ export default function OnboardingPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// useSearchParams требует Suspense-границы, иначе сборка падает на CSR bailout.
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingInner />
+    </Suspense>
   );
 }
