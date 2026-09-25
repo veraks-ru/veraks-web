@@ -80,7 +80,10 @@ if (!link) {
 } else {
   ok(`ссылка: ${link.replace(/token=[^&]+/, "token=…")}`);
   if (!/[?&]next=%2F(&|$)/.test(link)) fail("в ссылке нет next=%2F");
-  await page.goto(link, { waitUntil: "networkidle" });
+  // Ссылка строится от MAIL_LINK_BASE_URL бэкенда; открываем её на проверяемом фронте.
+  const local = new URL(link);
+  const target = `${base}${local.pathname}${local.search}`;
+  await page.goto(target, { waitUntil: "networkidle" });
   await page.waitForURL((u) => u.pathname === "/" || u.pathname === "/onboarding", { timeout: 15000 });
   ok(`после письма попали на ${new URL(page.url()).pathname}`);
   if (new URL(page.url()).pathname === "/") {
