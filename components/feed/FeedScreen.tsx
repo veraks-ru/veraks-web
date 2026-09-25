@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OracleArc } from "@/components/brand/OracleArc";
+import { TopNav } from "@/components/app/TopNav";
 import { Toast, type ToastData } from "@/components/ui/Toast";
 import { useAuth } from "@/components/app/AuthProvider";
 import { ApiError } from "@/lib/api/client";
@@ -26,11 +27,13 @@ import {
 } from "@/lib/feedStorage";
 import { pluralize } from "@/lib/format";
 import { withNext } from "@/lib/returnTo";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import type { FeedCard } from "@/lib/types";
 import { CardStack } from "./CardStack";
 import { DetailsSheet } from "./DetailsSheet";
 import { EndOfStack } from "./EndOfStack";
-import { FeedHeader } from "./FeedHeader";
+import { FeedBoard } from "./FeedBoard";
+import { CategoryStrip, DailyCounter, FeedHeader, GuestLine } from "./FeedHeader";
 import { GuestGate } from "./GuestGate";
 import { SwipeButtons } from "./SwipeButtons";
 import { useFeed } from "./useFeed";
@@ -58,6 +61,8 @@ export function FeedScreen() {
   useDarkChrome();
   const router = useRouter();
   const { me, loading: authLoading, subscribed, refresh } = useAuth();
+  // Широкий экран — доска карточек с кнопками; телефон — стопка со свайпом.
+  const wide = useMediaQuery("(min-width: 768px)");
 
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const feed = useFeed({ viewerKey: authLoading ? null : (me?.id ?? GUEST_OWNER), categoryId });
@@ -298,6 +303,90 @@ export function FeedScreen() {
   const emptyButMore = feed.status === "ready" && feed.cards.length === 0 && (feed.loadingMore || feed.hasMore);
   const showSkeleton = feed.status === "loading" || emptyButMore;
 
+  const sheets = (
+    <>
+      <p className="sr-only" aria-live="polite">
+        {live}
+      </p>
+      <DetailsSheet card={details} onClose={closeDetails} />
+      <GuestGate
+        open={gateOpen}
+        decision={gateDecision}
+        waiting={waiting}
+        onClose={continueAsGuest}
+        onContinue={continueAsGuest}
+      />
+    </>
+  );
+
+  if (wide) {
+    return (
+      <main className="bg-oracle grain min-h-dvh overflow-x-clip text-white">
+        <h1 className="sr-only">Лента прогнозов</h1>
+        <div inert={sheetOpen || undefined}>
+          <TopNav tone="dark" active="/" />
+          <div className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+              <div className="min-w-0 flex-1">
+                <CategoryStrip categoryId={categoryId} onCategory={setCategoryId} />
+              </div>
+              {me && <DailyCounter count={dailyCount} />}
+            </div>
+            {!me && (
+              <div className="mt-3">
+                <GuestLine
+                  mode="board"
+                  waiting={waiting}
+                  onOpenGate={() => {
+                    setGateDecision(null);
+                    setGateOpen(true);
+                  }}
+                />
+              </div>
+            )}
+
+            <section className="mt-6" aria-label="Открытые события">
+              {showSkeleton ? (
+                <BoardSkeleton />
+              ) : feed.status === "error" ? (
+                <div className="relative min-h-[22rem]">
+                  <ErrorCard kind={feed.error ?? "generic"} onRetry={feed.reload} />
+                </div>
+              ) : feed.cards.length > 0 ? (
+                <FeedBoard
+                  cards={feed.cards}
+                  hasMore={feed.hasMore}
+                  loadingMore={feed.loadingMore}
+                  disabled={sheetOpen}
+                  onLoadMore={feed.loadMore}
+                  onDecide={onDecide}
+                  onGone={onGone}
+                  onDetails={setDetails}
+                />
+              ) : (
+                <EndOfStack
+                  fill={false}
+                  skippedCount={feed.skippedCount}
+                  filtered={categoryId !== null}
+                  canPropose={!!me && subscribed}
+                  onRestoreSkipped={feed.restoreSkipped}
+                  onClearFilter={() => setCategoryId(null)}
+                />
+              )}
+            </section>
+          </div>
+        </div>
+
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
+          <div className="pointer-events-auto">
+            <Toast toast={toast} onClose={closeToast} />
+          </div>
+        </div>
+        {sheets}
+      </main>
+    );
+  }
+
   return (
     <main className="bg-oracle grain flex min-h-[calc(100dvh-3.75rem-env(safe-area-inset-bottom))] flex-col overflow-x-clip text-white md:min-h-dvh">
       <h1 className="sr-only">Лента прогнозов</h1>
@@ -362,19 +451,28 @@ export function FeedScreen() {
         </div>
       </div>
 
-      <p className="sr-only" aria-live="polite">
-        {live}
-      </p>
-
-      <DetailsSheet card={details} onClose={closeDetails} />
-      <GuestGate
-        open={gateOpen}
-        decision={gateDecision}
-        waiting={waiting}
-        onClose={continueAsGuest}
-        onContinue={continueAsGuest}
-      />
+      {sheets}
     </main>
+  );
+}
+
+function BoardSkeleton() {
+  return (
+    <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" role="status" aria-label="Загружаем события">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <li
+          key={i}
+          className="h-64 animate-pulse rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/60 p-5"
+        >
+          <div className="flex justify-between">
+            <span className="h-6 w-20 rounded-full bg-white/10" />
+            <span className="h-6 w-16 rounded-full bg-white/10" />
+          </div>
+          <span className="mt-5 block h-5 w-11/12 rounded bg-white/10" />
+          <span className="mt-2 block h-5 w-3/4 rounded bg-white/10" />
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -164,7 +164,8 @@ export function useFeed({
       skip,
       reload,
       restoreSkipped,
+      loadMore,
     }),
-    [status, error, cards, loadingMore, nextCursor, skippedCount, remove, restore, skip, reload, restoreSkipped],
+    [status, error, cards, loadingMore, nextCursor, skippedCount, remove, restore, skip, reload, restoreSkipped, loadMore],
   );
 }

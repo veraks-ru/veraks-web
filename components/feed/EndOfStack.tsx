@@ -16,7 +16,10 @@ export function EndOfStack({
   canPropose,
   onRestoreSkipped,
   onClearFilter,
+  fill = true,
 }: {
+  /** Растянуться по секции стопки (absolute) или лечь блоком в потоке. */
+  fill?: boolean;
   skippedCount: number;
   /** Пусто из-за фильтра по категории, а не вообще. */
   filtered: boolean;
@@ -38,7 +41,11 @@ export function EndOfStack({
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-[color:var(--color-edge)] p-6 text-center">
+    <div
+      className={`flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-[color:var(--color-edge)] p-6 text-center ${
+        fill ? "absolute inset-0" : "min-h-[22rem]"
+      }`}
+    >
       <OracleArc activeIndex={null} className="w-36 opacity-60" />
       <p className="mt-5 font-display text-xl font-600">
         {filtered ? "В этой категории пока всё" : "Открытых событий больше нет"}

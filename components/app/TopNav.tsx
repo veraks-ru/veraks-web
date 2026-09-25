@@ -17,15 +17,17 @@ const LINKS = [
 
 /**
  * Шапка светлой среды (события, лидерборды, профиль). active — текущий раздел.
+ * tone="dark" — та же шапка для тёмной ленты на широком экране.
  *
  * На мобильном шапка однорядная: вся навигация ушла в нижнюю панель
  * (``BottomNav``), до которой достаёт большой палец. Здесь остаются только
  * логотип, колокольчик уведомлений и вход — всё остальное дублировало бы
  * панель и съедало высоту экрана.
  */
-export function TopNav({ active }: { active?: string }) {
+export function TopNav({ active, tone = "light" }: { active?: string; tone?: "light" | "dark" }) {
   const { me, loading, signOut } = useAuth();
   const router = useRouter();
+  const dark = tone === "dark";
 
   async function handleSignOut() {
     await signOut();
@@ -37,10 +39,14 @@ export function TopNav({ active }: { active?: string }) {
     : LINKS;
 
   return (
-    <header className="pt-safe sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+    <header
+      className={`pt-safe sticky top-0 z-30 border-b backdrop-blur-md ${
+        dark ? "border-[color:var(--color-edge)] bg-[color:var(--color-ink)]/85" : "border-line bg-surface/85"
+      }`}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <div className="flex items-center gap-8">
-          <Wordmark tone="light" />
+          <Wordmark tone={dark ? "dark" : "light"} />
           <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => {
               const on = active === l.href;
@@ -50,7 +56,13 @@ export function TopNav({ active }: { active?: string }) {
                   href={l.href}
                   aria-current={on ? "page" : undefined}
                   className={`rounded-full px-3.5 py-2 text-sm font-600 transition-colors ${
-                    on ? "bg-paper text-graphite" : "text-slate hover:text-graphite"
+                    dark
+                      ? on
+                        ? "bg-white/10 text-white"
+                        : "text-haze hover:text-white"
+                      : on
+                        ? "bg-paper text-graphite"
+                        : "text-slate hover:text-graphite"
                   }`}
                 >
                   {l.label}
@@ -61,14 +73,18 @@ export function TopNav({ active }: { active?: string }) {
         </div>
 
         {loading ? (
-          <span className="size-8 animate-pulse rounded-full bg-line" aria-hidden />
+          <span className={`size-8 animate-pulse rounded-full ${dark ? "bg-white/10" : "bg-line"}`} aria-hidden />
         ) : me ? (
           <div className="flex items-center gap-2">
-            <NotificationBell />
+            <NotificationBell tone={tone} />
             {["editor", "arbiter", "admin"].includes(me.role) && (
               <Link
                 href="/admin"
-                className="hidden rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite sm:inline"
+                className={`hidden rounded-full border px-3 py-1.5 text-sm font-600 sm:inline ${
+                  dark
+                    ? "border-[color:var(--color-edge)] text-haze hover:text-white"
+                    : "border-line text-slate hover:text-graphite"
+                }`}
               >
                 Админка
               </Link>
@@ -76,18 +92,28 @@ export function TopNav({ active }: { active?: string }) {
             {/* Кабинет и выход на мобильном живут в нижней панели. */}
             <Link
               href="/account"
-              className="hidden items-center gap-2.5 rounded-full border border-line py-1 pr-3.5 pl-1 transition-colors hover:bg-paper md:flex"
+              className={`hidden items-center gap-2.5 rounded-full border py-1 pr-3.5 pl-1 transition-colors md:flex ${
+                dark ? "border-[color:var(--color-edge)] hover:bg-white/5" : "border-line hover:bg-paper"
+              }`}
               aria-label="Мой кабинет"
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-graphite text-sm font-700 text-white">
+              <span
+                className={`flex size-8 items-center justify-center rounded-full text-sm font-700 ${
+                  dark ? "bg-white text-ink-3" : "bg-graphite text-white"
+                }`}
+              >
                 {(me.display_name || me.username)[0]?.toUpperCase()}
               </span>
-              <span className="text-sm font-600">@{me.username}</span>
+              <span className={`text-sm font-600 ${dark ? "text-white" : ""}`}>@{me.username}</span>
             </Link>
             <button
               type="button"
               onClick={handleSignOut}
-              className="hidden rounded-full border border-line px-3 py-1.5 text-sm font-600 text-slate hover:text-graphite md:inline"
+              className={`hidden rounded-full border px-3 py-1.5 text-sm font-600 md:inline ${
+                dark
+                  ? "border-[color:var(--color-edge)] text-haze hover:text-white"
+                  : "border-line text-slate hover:text-graphite"
+              }`}
             >
               Выйти
             </button>

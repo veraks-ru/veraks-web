@@ -6,10 +6,7 @@ import { useCategoryList } from "@/lib/api/useCategories";
 import { pluralize } from "@/lib/format";
 import type { ApiMe } from "@/lib/api/dto";
 
-/**
- * Шапка ленты: логотип, счётчик за сегодня, лента категорий и строка гостя.
- * На десктопе здесь же ссылки на разделы — TopNav светлая и сюда не ложится.
- */
+/** Шапка ленты на телефоне: логотип, счётчик за сегодня, строка гостя, категории. */
 export function FeedHeader({
   me,
   dailyCount,
@@ -26,68 +23,89 @@ export function FeedHeader({
   onCategory: (id: string | null) => void;
   onOpenGate: () => void;
 }) {
-  const categories = useCategoryList().filter((c) => !c.is_restricted);
-
   return (
     <header>
       <div className="flex items-center justify-between gap-3">
         <Wordmark tone="dark" />
-        <div className="flex items-center gap-4">
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Разделы">
-            <TopLink href="/events">События</TopLink>
-            <TopLink href="/leaderboards">Топ</TopLink>
-            {me ? (
-              <TopLink href="/account">@{me.username}</TopLink>
-            ) : (
-              <TopLink href="/join?next=%2F">Войти</TopLink>
-            )}
-          </nav>
-          {me && dailyCount > 0 && (
-            <span className="text-sm text-haze" aria-label={`${dailyCount} ${pluralize(dailyCount, ["прогноз", "прогноза", "прогнозов"])} за сегодня`}>
-              <span className="num font-600 text-white">{dailyCount}</span> сегодня
-            </span>
-          )}
-        </div>
+        {me && <DailyCounter count={dailyCount} />}
       </div>
-
       {!me && (
-        <p className="mt-3 text-sm leading-relaxed text-haze">
-          {waiting > 0 ? (
-            <button type="button" onClick={onOpenGate} className="font-600 text-signal">
-              {waiting} {pluralize(waiting, ["ответ ждёт", "ответа ждут", "ответов ждут"])} входа — войти
-            </button>
-          ) : (
-            <>
-              Влево — нет, вправо — да. Войдите, чтобы ответы шли в зачёт.{" "}
-              <Link href="/about" className="font-600 text-white underline underline-offset-2">
-                О проекте
-              </Link>
-            </>
-          )}
-        </p>
-      )}
-
-      {categories.length > 0 && (
-        <div className="filter-strip mt-4" role="group" aria-label="Категории">
-          <Chip on={categoryId === null} onClick={() => onCategory(null)}>
-            Все
-          </Chip>
-          {categories.map((c) => (
-            <Chip key={c.id} on={categoryId === c.id} onClick={() => onCategory(c.id)}>
-              {c.title}
-            </Chip>
-          ))}
+        <div className="mt-3">
+          <GuestLine waiting={waiting} onOpenGate={onOpenGate} />
         </div>
       )}
+      <div className="mt-4">
+        <CategoryStrip categoryId={categoryId} onCategory={onCategory} />
+      </div>
     </header>
   );
 }
 
-function TopLink({ href, children }: { href: string; children: React.ReactNode }) {
+/** «12 сегодня» — сколько ответов человек дал за день. */
+export function DailyCounter({ count }: { count: number }) {
+  if (count <= 0) return null;
   return (
-    <Link href={href} className="rounded-full px-3 py-2 text-sm font-600 text-haze hover:text-white">
-      {children}
-    </Link>
+    <span
+      className="text-sm text-haze"
+      aria-label={`${count} ${pluralize(count, ["прогноз", "прогноза", "прогнозов"])} за сегодня`}
+    >
+      <span className="num font-600 text-white">{count}</span> сегодня
+    </span>
+  );
+}
+
+/** Строка для гостя: как пользоваться и что ответы ждут входа. */
+export function GuestLine({
+  waiting,
+  onOpenGate,
+  mode = "swipe",
+}: {
+  waiting: number;
+  onOpenGate: () => void;
+  /** Стопка со свайпом на телефоне или доска с кнопками на широком экране. */
+  mode?: "swipe" | "board";
+}) {
+  return (
+    <p className="text-sm leading-relaxed text-haze">
+      {waiting > 0 ? (
+        <button type="button" onClick={onOpenGate} className="font-600 text-signal">
+          {waiting} {pluralize(waiting, ["ответ ждёт", "ответа ждут", "ответов ждут"])} входа — войти
+        </button>
+      ) : (
+        <>
+          {mode === "board"
+            ? "Под каждым событием — «Нет» или «Да». Войдите, чтобы ответы шли в зачёт."
+            : "Влево — нет, вправо — да. Войдите, чтобы ответы шли в зачёт."}{" "}
+          <Link href="/about" className="font-600 text-white underline underline-offset-2">
+            О проекте
+          </Link>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Лента категорий: «Все» и справочник без запрещённых тем. */
+export function CategoryStrip({
+  categoryId,
+  onCategory,
+}: {
+  categoryId: string | null;
+  onCategory: (id: string | null) => void;
+}) {
+  const categories = useCategoryList().filter((c) => !c.is_restricted);
+  if (categories.length === 0) return null;
+  return (
+    <div className="filter-strip" role="group" aria-label="Категории">
+      <Chip on={categoryId === null} onClick={() => onCategory(null)}>
+        Все
+      </Chip>
+      {categories.map((c) => (
+        <Chip key={c.id} on={categoryId === c.id} onClick={() => onCategory(c.id)}>
+          {c.title}
+        </Chip>
+      ))}
+    </div>
   );
 }
 

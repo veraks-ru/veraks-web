@@ -13,7 +13,7 @@ import type { ApiNotification } from "@/lib/api/dto";
 
 const WS_URL = process.env.NEXT_PUBLIC_GOCTOPUS_URL;
 
-export function NotificationBell() {
+export function NotificationBell({ tone = "light" }: { tone?: "light" | "dark" } = {}) {
   const { me } = useAuth();
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -108,7 +108,11 @@ export function NotificationBell() {
       <button
         onClick={toggle}
         aria-label="Уведомления"
-        className="relative flex size-9 items-center justify-center rounded-full border border-line text-slate hover:text-graphite"
+        className={`relative flex size-9 items-center justify-center rounded-full border ${
+          tone === "dark"
+            ? "border-[color:var(--color-edge)] text-haze hover:text-white"
+            : "border-line text-slate hover:text-graphite"
+        }`}
       >
         <BellIcon className="size-5" />
         {unread > 0 && (

@@ -250,5 +250,35 @@ const browser = await chromium.launch();
   await s.ctx.close();
 }
 
+/* ── Широкий экран: доска карточек ── */
+{
+  console.log("\n=== desktop board");
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: "ru-RU" });
+  const log = await mockApi(ctx, { me: ME, feed: singlePage(CARDS) });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.goto(`${base}/`, { waitUntil: "networkidle" });
+  const cards = page.locator("ul[aria-label='Открытые события'] > li:not([aria-hidden])");
+  await cards.first().waitFor({ timeout: 15000 });
+  check((await cards.count()) === CARDS.length, `доска показывает все карточки (${await cards.count()})`);
+  check((await page.getByRole("link", { name: "Лидерборды" }).count()) === 1, "сверху обычная шапка с разделами");
+  check((await page.locator("article h2").count()) === 0, "стопки на широком экране нет");
+  await page.screenshot({ path: `${out}/desktop-1-board.png` });
+  await cards.first().getByRole("button", { name: "Да", exact: true }).click();
+  await page.waitForTimeout(500);
+  check((await cards.count()) === CARDS.length - 1, "ответ «Да» убрал карточку из сетки");
+  check((await page.getByRole("button", { name: "Отменить" }).count()) === 1, "тост с «Отменить» внизу");
+  await page.screenshot({ path: `${out}/desktop-2-after-yes.png` });
+  await page.getByRole("button", { name: "Отменить" }).click();
+  await page.waitForTimeout(400);
+  check((await cards.count()) === CARDS.length, "отмена вернула карточку");
+  await cards.first().getByRole("button", { name: "Нет", exact: true }).click();
+  await page.waitForTimeout(4800);
+  check(log.puts.length === 1 && log.puts[0].grade === "probably_no", `«Нет» записан через окно отмены: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
+  check(errors.length === 0, `ошибок страницы нет (${errors.join(" || ")})`);
+  await ctx.close();
+}
+
 await browser.close();
 console.log(process.exitCode ? "\nЕСТЬ ПАДЕНИЯ" : "\nВсе проверки пройдены");
