@@ -284,6 +284,8 @@ export function FeedScreen() {
     return () => window.removeEventListener("keydown", onKey);
   }, [sheetOpen, topCard, undoAny]);
 
+  const closeDetails = useCallback(() => setDetails(null), []);
+
   /* ── Гость закрыл шторку любым способом — значит, смотрит без входа ── */
 
   const continueAsGuest = useCallback(() => {
@@ -364,7 +366,7 @@ export function FeedScreen() {
         {live}
       </p>
 
-      <DetailsSheet card={details} onClose={() => setDetails(null)} />
+      <DetailsSheet card={details} onClose={closeDetails} />
       <GuestGate
         open={gateOpen}
         decision={gateDecision}

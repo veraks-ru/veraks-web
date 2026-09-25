@@ -24,6 +24,11 @@ export function BottomSheet({
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // onClose через ref: родитель может передавать новую функцию на каждый
+  // рендер, а переустанавливать ловушку (и возвращать фокус на первый
+  // элемент) нужно только при открытии.
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -34,7 +39,7 @@ export function BottomSheet({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        close.current();
         return;
       }
       if (e.key !== "Tab" || !el) return;
@@ -60,7 +65,7 @@ export function BottomSheet({
       window.removeEventListener("keydown", onKey);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
