@@ -98,7 +98,7 @@ if (!link) {
       const mine = await fetch(`${API}/events/${first.id}/prediction/me`, { headers: { cookie: cookies } });
       if (mine.status === 200) {
         const body = await mine.json();
-        body.confidence_grade === "probably_yes" ? ok("прогноз гостя дозаписан как probably_yes") : fail(`грейд ${body.confidence_grade}`);
+        body.confidence_grade === "definitely_yes" ? ok("прогноз гостя дозаписан как definitely_yes") : fail(`грейд ${body.confidence_grade}`);
       } else fail(`prediction/me → ${mine.status}`);
     } else fail("первое событие не найдено в публичной ленте");
 
@@ -110,7 +110,7 @@ if (!link) {
     if (sec) {
       const mine2 = await fetch(`${API}/events/${sec.id}/prediction/me`, { headers: { cookie: cookies } });
       const b = mine2.status === 200 ? await mine2.json() : null;
-      b?.confidence_grade === "probably_no" ? ok("свайп влево записан как probably_no") : fail(`второй прогноз: ${mine2.status} ${b?.confidence_grade}`);
+      b?.confidence_grade === "definitely_no" ? ok("свайп влево записан как definitely_no") : fail(`второй прогноз: ${mine2.status} ${b?.confidence_grade}`);
     }
     await page.screenshot({ path: `${out}/3-after-swipe.png` });
   }

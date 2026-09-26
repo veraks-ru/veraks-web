@@ -47,10 +47,10 @@ const card = (i, title, cat, dist, desc) => ({
   crowd: { total_count: Object.values(dist).reduce((a, b) => a + b, 0), distribution: dist, mean_probability: "0.62" },
 });
 const CARDS = [
-  card(1, "Ключевую ставку ЦБ снизят на заседании 24 октября?", cats[0], { definitely_no: 12, probably_no: 40, fifty_fifty: 30, probably_yes: 96, definitely_yes: 36 }, "Решение по ставке принимает совет директоров Банка России."),
-  card(2, "«Зенит» станет чемпионом РПЛ в сезоне 2026/27?", cats[1], { definitely_no: 3, probably_no: 9, fifty_fifty: 8, probably_yes: 21, definitely_yes: 40 }, "Чемпионство определяется по итогам 30 туров."),
+  card(1, "Ключевую ставку ЦБ снизят на заседании 24 октября?", cats[0], { definitely_no: 12, definitely_no: 40, fifty_fifty: 30, definitely_yes: 96, definitely_yes: 36 }, "Решение по ставке принимает совет директоров Банка России."),
+  card(2, "«Зенит» станет чемпионом РПЛ в сезоне 2026/27?", cats[1], { definitely_no: 3, definitely_no: 9, fifty_fifty: 8, definitely_yes: 21, definitely_yes: 40 }, "Чемпионство определяется по итогам 30 туров."),
   card(3, "Яндекс выпустит собственный смартфон до конца года?", cats[2], {}, ""),
-  card(4, "Курс доллара опустится ниже 80 рублей к Новому году?", cats[0], { probably_no: 5, probably_yes: 7 }, ""),
+  card(4, "Курс доллара опустится ниже 80 рублей к Новому году?", cats[0], { definitely_no: 5, definitely_yes: 7 }, ""),
 ];
 const ME = { id: "u1", username: "kalibr", display_name: "Калибр", role: "user", status: "active", needs_onboarding: false, missing_consents: [], email: "k@example.com", identity_verified: false };
 
@@ -143,7 +143,7 @@ const browser = await chromium.launch();
   await page.waitForTimeout(600);
   check((await s.topTitle()) === CARDS[1].title, "после «смотреть без входа» свайп улетает");
   const outbox = await page.evaluate(() => JSON.parse(localStorage.getItem("veraks.feed.outbox") || "[]"));
-  check(outbox.length === 1 && outbox[0].owner === "guest" && outbox[0].grade === "probably_yes", `ящик гостя: ${JSON.stringify(outbox.map((e) => [e.eventId, e.grade, e.owner]))}`);
+  check(outbox.length === 1 && outbox[0].owner === "guest" && outbox[0].grade === "definitely_yes", `ящик гостя: ${JSON.stringify(outbox.map((e) => [e.eventId, e.grade, e.owner]))}`);
   check(/1 ответ ждёт входа/.test(await page.locator("header").textContent()), "в шапке «1 ответ ждёт входа»");
   await page.screenshot({ path: `${out}/guest-4-waiting.png` });
   check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
@@ -182,10 +182,10 @@ const browser = await chromium.launch();
   await page.waitForTimeout(200);
   check((await page.locator('[role="dialog"]').count()) === 0, "Esc закрыл шторку");
 
-  // свайп влево → PUT probably_no через окно отмены
+  // свайп влево → PUT definitely_no через окно отмены
   await s.drag(-170);
   await page.waitForTimeout(4600);
-  check(log.puts.length === 1 && log.puts[0].event === "e1" && log.puts[0].grade === "probably_no", `свайп влево записан: ${JSON.stringify(log.puts)}`);
+  check(log.puts.length === 1 && log.puts[0].event === "e1" && log.puts[0].grade === "definitely_no", `свайп влево записан: ${JSON.stringify(log.puts)}`);
 
   // пропуск с клавиатуры
   await page.keyboard.press("ArrowUp");
@@ -206,7 +206,7 @@ const browser = await chromium.launch();
   const topAfterFlight = await s.topTitle();
   check(topAfterFlight === CARDS[3].title || topAfterFlight === CARDS[2].title, `после отмены в полёте стопка согласована (top: ${topAfterFlight})`);
   await page.waitForTimeout(4600);
-  const wrong = log.puts.filter((p) => (p.event === "e3" && p.grade !== "probably_yes") || p.event === "e2" || p.event === "e4");
+  const wrong = log.puts.filter((p) => (p.event === "e3" && p.grade !== "definitely_yes") || p.event === "e2" || p.event === "e4");
   check(wrong.length === 0, `ни одного чужого/неверного PUT: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
   if (topAfterFlight === CARDS[2].title) {
     await s.drag(170);
@@ -223,7 +223,7 @@ const browser = await chromium.launch();
   await page.screenshot({ path: `${out}/user-4-end.png` });
   await page.waitForTimeout(4600);
   const e4 = log.puts.find((p) => p.event === "e4");
-  check(e4?.grade === "probably_yes", `последний свайп записан как probably_yes (${JSON.stringify(e4)})`);
+  check(e4?.grade === "definitely_yes", `последний свайп записан как definitely_yes (${JSON.stringify(e4)})`);
   check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
   await s.ctx.close();
 }
@@ -275,7 +275,7 @@ const browser = await chromium.launch();
   check((await cards.count()) === CARDS.length, "отмена вернула карточку");
   await cards.first().getByRole("button", { name: "Нет", exact: true }).click();
   await page.waitForTimeout(4800);
-  check(log.puts.length === 1 && log.puts[0].grade === "probably_no", `«Нет» записан через окно отмены: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
+  check(log.puts.length === 1 && log.puts[0].grade === "definitely_no", `«Нет» записан через окно отмены: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
   check(errors.length === 0, `ошибок страницы нет (${errors.join(" || ")})`);
   await ctx.close();
 }
