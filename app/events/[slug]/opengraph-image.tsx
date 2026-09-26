@@ -107,6 +107,30 @@ const CACHE = new Map<string, Cached>();
 // ждут его результат.
 const INFLIGHT = new Map<string, Promise<ArrayBuffer>>();
 
+// Рендеров одновременно — не больше двух. satori с resvg держат по несколько
+// десятков мегабайт каждый, и пачка разных карточек сразу после выката (кэш
+// пуст, парсеры превью приходят вместе) выбивала контейнер по памяти
+// (OOMKilled при лимите 512Mi, 26.09.2026). Остальные ждут своей очереди,
+// слот передаётся следующему напрямую.
+const MAX_PARALLEL_RENDERS = 2;
+let activeRenders = 0;
+const renderQueue: Array<() => void> = [];
+
+async function withRenderSlot<T>(job: () => Promise<T>): Promise<T> {
+  if (activeRenders >= MAX_PARALLEL_RENDERS) {
+    await new Promise<void>((resolve) => renderQueue.push(resolve));
+  } else {
+    activeRenders++;
+  }
+  try {
+    return await job();
+  } finally {
+    const next = renderQueue.shift();
+    if (next) next();
+    else activeRenders--;
+  }
+}
+
 async function cardFor(slug: string): Promise<ArrayBuffer> {
   const fresh = CACHE.get(slug);
   if (fresh && Date.now() - fresh.at < TTL_MS) return fresh.png;
@@ -114,7 +138,7 @@ async function cardFor(slug: string): Promise<ArrayBuffer> {
   const running = INFLIGHT.get(slug);
   if (running) return running;
 
-  const job = renderCard(slug)
+  const job = withRenderSlot(() => renderCard(slug))
     .then((png) => {
       CACHE.set(slug, { png, at: Date.now() });
       // Вытесняем самые давние: Map хранит порядок вставки, а перезапись
