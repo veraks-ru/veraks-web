@@ -58,23 +58,46 @@ export function SwipeCard({
     };
   }, [top, swipe.fly, flyRef]);
 
-  // Описание занимает всё, что осталось между заголовком и блоком толпы:
-  // число строк считается по фактической высоте, последняя — с многоточием.
-  // Когда места нет и на одну строку, описания нет (оно есть в «Подробнее»).
+  // Место между заголовком и блоком толпы делят описание и критерий «что
+  // считается „да“»: сначала описание столько строк, сколько ему нужно,
+  // остаток — критерию; последняя строка каждого — с многоточием. Число
+  // строк считается по фактической высоте бокса (у карточки фиксированная
+  // высота, поэтому бокс от содержимого не зависит).
   const descBox = useRef<HTMLDivElement>(null);
   const descText = useRef<HTMLParagraphElement>(null);
-  const [descLines, setDescLines] = useState<number | null>(null);
+  const critText = useRef<HTMLParagraphElement>(null);
+  const [fit, setFit] = useState<{ desc: number; crit: number } | null>(null);
   useLayoutEffect(() => {
     const box = descBox.current;
-    const text = descText.current;
-    if (!box || !text) return;
-    const fit = () => {
-      const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 22;
-      const lines = Math.max(0, Math.floor(box.clientHeight / lineHeight));
-      setDescLines((prev) => (prev === lines ? prev : lines));
+    if (!box) return;
+    const measure = () => {
+      const desc = descText.current;
+      const crit = critText.current;
+      const probe = desc ?? crit;
+      if (!probe) return;
+      const lineHeight = parseFloat(getComputedStyle(probe).lineHeight) || 22;
+      const total = Math.max(0, Math.floor(box.clientHeight / lineHeight));
+      let d = 0;
+      if (desc) {
+        // Меряем полную высоту текста без обрезки, затем сами ставим итог:
+        // React переписывает inline-стили только при смене своих значений.
+        desc.style.display = "-webkit-box";
+        desc.style.webkitLineClamp = "999";
+        d = Math.min(total, Math.round(desc.scrollHeight / lineHeight));
+        desc.style.webkitLineClamp = String(Math.max(d, 1));
+        desc.style.display = d === 0 ? "none" : "-webkit-box";
+      }
+      // Подпись критерия и отступ занимают примерно две строки.
+      const c = crit ? Math.max(0, total - d - 2) : 0;
+      if (crit) {
+        crit.style.webkitLineClamp = String(Math.max(c, 1));
+        const wrap = crit.parentElement;
+        if (wrap) wrap.style.display = c === 0 ? "none" : "";
+      }
+      setFit((prev) => (prev && prev.desc === d && prev.crit === c ? prev : { desc: d, crit: c }));
     };
-    fit();
-    const ro = new ResizeObserver(fit);
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(box);
     return () => ro.disconnect();
   }, []);
@@ -129,18 +152,35 @@ export function SwipeCard({
           {card.title}
         </h2>
 
-        {card.description && (
-          <div ref={descBox} className="mt-2.5 min-h-0 flex-1">
-            <p
-              ref={descText}
-              className="line-clamp-3 text-sm leading-relaxed text-slate"
-              style={{
-                WebkitLineClamp: descLines ?? 3,
-                display: descLines === 0 ? "none" : undefined,
-              }}
-            >
-              {card.description}
-            </p>
+        {(card.description || card.resolutionCriteria) && (
+          <div ref={descBox} className="mt-2.5 min-h-0 flex-1 overflow-hidden">
+            {card.description && (
+              <p
+                ref={descText}
+                className="line-clamp-3 text-sm leading-relaxed text-slate"
+                style={{
+                  WebkitLineClamp: fit ? fit.desc : 3,
+                  display: fit && fit.desc === 0 ? "none" : undefined,
+                }}
+              >
+                {card.description}
+              </p>
+            )}
+            {card.resolutionCriteria && (
+              <div
+                className={card.description ? "mt-2.5" : ""}
+                style={{ display: fit && fit.crit === 0 ? "none" : undefined }}
+              >
+                <p className="text-xs font-600 text-slate">Что считается «да»</p>
+                <p
+                  ref={critText}
+                  className="line-clamp-3 text-sm leading-relaxed text-slate"
+                  style={{ WebkitLineClamp: fit ? fit.crit : 3 }}
+                >
+                  {card.resolutionCriteria}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
