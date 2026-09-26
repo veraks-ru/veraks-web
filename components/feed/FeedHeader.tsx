@@ -26,7 +26,7 @@ export function FeedHeader({
   return (
     <header>
       <div className="flex items-center justify-between gap-3">
-        <Wordmark tone="dark" />
+        <Wordmark tone="light" />
         {me && <DailyCounter count={dailyCount} />}
       </div>
       {!me && (
@@ -46,10 +46,10 @@ export function DailyCounter({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="text-sm text-haze"
+      className="text-sm text-slate"
       aria-label={`${count} ${pluralize(count, ["прогноз", "прогноза", "прогнозов"])} за сегодня`}
     >
-      <span className="num font-600 text-white">{count}</span> сегодня
+      <span className="num font-600 text-graphite">{count}</span> сегодня
     </span>
   );
 }
@@ -66,9 +66,9 @@ export function GuestLine({
   mode?: "swipe" | "board";
 }) {
   return (
-    <p className="text-sm leading-relaxed text-haze">
+    <p className="text-sm leading-relaxed text-slate">
       {waiting > 0 ? (
-        <button type="button" onClick={onOpenGate} className="font-600 text-signal">
+        <button type="button" onClick={onOpenGate} className="font-600 text-[color:var(--color-signal-deep)]">
           {waiting} {pluralize(waiting, ["ответ ждёт", "ответа ждут", "ответов ждут"])} входа — войти
         </button>
       ) : (
@@ -76,7 +76,7 @@ export function GuestLine({
           {mode === "board"
             ? "Под каждым событием — «Нет» или «Да». Войдите, чтобы ответы шли в зачёт."
             : "Влево — нет, вправо — да. Войдите, чтобы ответы шли в зачёт."}{" "}
-          <Link href="/about" className="font-600 text-white underline underline-offset-2">
+          <Link href="/about" className="font-600 text-graphite underline underline-offset-2">
             О проекте
           </Link>
         </>
@@ -116,7 +116,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       aria-pressed={on}
       onClick={onClick}
       className={`min-h-10 rounded-full px-3.5 text-sm font-600 transition-colors ${
-        on ? "bg-white text-ink-3" : "border border-[color:var(--color-edge)] text-haze hover:text-white"
+        on ? "bg-graphite text-white" : "border border-line bg-surface text-slate hover:text-graphite"
       }`}
     >
       {children}

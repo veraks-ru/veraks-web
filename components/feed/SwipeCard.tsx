@@ -11,9 +11,11 @@ import { swipeBaseStyle, useSwipe } from "./useSwipe";
  * Карточка события в стопке. Верхняя ловит жест, остальные лежат под ней
  * чуть меньше и ниже — видно, что за этой есть следующие.
  *
- * Картинок у событий нет, поэтому карточка типографская: вопрос набран
- * Unbounded — это и есть «большой момент» экрана, ради которого человек
- * здесь. Ответ толпы — словом и столбиками, без процентов (DESIGN.md).
+ * Светлая среда «прибора»: лента живёт в браузере между его панелями, и
+ * белая карточка на бумажном фоне сливается с ним, а не спорит. Картинок у
+ * событий нет, поэтому карточка типографская: вопрос набран Unbounded —
+ * это и есть «большой момент» экрана. Ответ толпы — словом и столбиками,
+ * без процентов (DESIGN.md).
  */
 export function SwipeCard({
   card,
@@ -77,18 +79,18 @@ export function SwipeCard({
       className="absolute inset-0 transition-[transform,opacity] duration-200"
       style={{ ...(top ? swipeBaseStyle : {}), ...stacked, zIndex: 3 - depth }}
     >
-      <article className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/85 p-5 shadow-[0_28px_60px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm sm:p-6">
+      <article className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-line bg-surface p-5 shadow-[0_18px_50px_-30px_rgba(20,23,28,0.45)] sm:p-6">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="truncate rounded-full bg-white/10 px-2.5 py-1 font-600 text-haze">
+          <span className="truncate rounded-full bg-paper px-2.5 py-1 font-600 text-slate">
             {card.category.title}
           </span>
           <span className="flex shrink-0 items-center gap-2">
-            <span className="font-600 text-warm">{deadlineLabel(card.closesAt)}</span>
+            <span className="font-600 text-[color:var(--color-warm-ink)]">{deadlineLabel(card.closesAt)}</span>
             <button
               type="button"
               onClick={onDetails}
               aria-label="Подробнее"
-              className="-my-1 flex size-11 items-center justify-center rounded-full border border-[color:var(--color-edge)] text-signal"
+              className="-my-1 flex size-11 items-center justify-center rounded-full border border-line text-[color:var(--color-signal-deep)]"
             >
               <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
                 <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.75" />
@@ -98,34 +100,33 @@ export function SwipeCard({
           </span>
         </div>
 
-        <h2 className={`mt-4 line-clamp-5 font-display font-600 text-balance text-white ${titleSize}`}>
+        <h2 className={`mt-4 line-clamp-5 font-display font-600 text-balance text-graphite ${titleSize}`}>
           {card.title}
         </h2>
 
         {card.description && (
-          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-haze hidden [@media(min-height:700px)]:block">
+          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate hidden [@media(min-height:700px)]:block">
             {card.description}
           </p>
         )}
 
-        <div className="mt-auto shrink-0 border-t border-[color:var(--color-edge)] pt-3">
+        <div className="mt-auto shrink-0 border-t border-line pt-3">
           {card.forecasters > 0 ? (
             <MiniConsensus
               crowd={card.crowd}
-              tone="dark"
-              aside={<span className="num shrink-0 text-haze-dim">{nPeople(card.forecasters)}</span>}
+              aside={<span className="num shrink-0 text-slate">{nPeople(card.forecasters)}</span>}
             />
           ) : (
-            <p className="text-sm text-haze">Никто ещё не высказался — ваш прогноз будет первым.</p>
+            <p className="text-sm text-slate">Никто ещё не высказался — ваш прогноз будет первым.</p>
           )}
         </div>
       </article>
 
       {top && (
         <>
-          <Stamp side="left" tone="warm" label={SWIPE_LABELS.right} varName="--swipe-right" />
-          <Stamp side="right" tone="cool" label={SWIPE_LABELS.left} varName="--swipe-left" />
-          <Stamp side="bottom" tone="haze" label={SWIPE_LABELS.up} varName="--swipe-up" />
+          <Stamp side="left" tone="warm-ink" label={SWIPE_LABELS.right} varName="--swipe-right" />
+          <Stamp side="right" tone="cool-ink" label={SWIPE_LABELS.left} varName="--swipe-left" />
+          <Stamp side="bottom" tone="slate" label={SWIPE_LABELS.up} varName="--swipe-up" />
         </>
       )}
     </div>
@@ -135,7 +136,8 @@ export function SwipeCard({
 /**
  * Штамп ответа, проявляющийся по ходу жеста. «Да» слева (карточка едет
  * вправо и открывает левый край), «Нет» справа, «Пропустить» внизу.
- * Цвета спектра убеждения: warm — да, cool — нет; не красный и не зелёный.
+ * Чернильные тона спектра убеждения: warm-ink — да, cool-ink — нет; не
+ * красный и не зелёный.
  */
 function Stamp({
   side,
@@ -144,7 +146,7 @@ function Stamp({
   varName,
 }: {
   side: "left" | "right" | "bottom";
-  tone: "warm" | "cool" | "haze";
+  tone: "warm-ink" | "cool-ink" | "slate";
   label: string;
   varName: string;
 }) {
@@ -158,7 +160,7 @@ function Stamp({
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute ${place} rounded-2xl border-[3px] px-3.5 py-1 font-display text-2xl font-700 tracking-wide`}
+      className={`pointer-events-none absolute ${place} rounded-2xl border-[3px] bg-surface/90 px-3.5 py-1 font-display text-2xl font-700 tracking-wide`}
       style={{ opacity: `var(${varName}, 0)`, borderColor: color, color }}
     >
       {label}

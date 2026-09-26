@@ -42,15 +42,15 @@ export function EndOfStack({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-[color:var(--color-edge)] p-6 text-center ${
+      className={`flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-line bg-surface p-6 text-center ${
         fill ? "absolute inset-0" : "min-h-[22rem]"
       }`}
     >
-      <OracleArc activeIndex={null} className="w-36 opacity-60" />
-      <p className="mt-5 font-display text-xl font-600">
+      <OracleArc activeIndex={null} className="w-36 opacity-70" />
+      <p className="mt-5 font-display text-xl font-600 text-graphite">
         {filtered ? "В этой категории пока всё" : "Открытых событий больше нет"}
       </p>
-      <p className="mt-2 max-w-xs text-sm leading-relaxed text-haze">
+      <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate">
         {skippedCount > 0
           ? "Пропущенные можно посмотреть ещё раз."
           : "Новые появляются каждый день. Загляните позже или позовите друзей."}
@@ -58,24 +58,24 @@ export function EndOfStack({
 
       <div className="mt-6 grid w-full max-w-xs gap-2.5">
         {skippedCount > 0 && (
-          <Button variant="signal" size="md" onClick={onRestoreSkipped}>
+          <Button variant="solid-light" size="md" onClick={onRestoreSkipped}>
             Показать пропущенные ({skippedCount})
           </Button>
         )}
         {filtered && (
-          <Button variant="ghost-dark" size="md" onClick={onClearFilter}>
+          <Button variant="ghost-light" size="md" onClick={onClearFilter}>
             Все категории
           </Button>
         )}
         {canPropose && (
-          <ButtonLink href="/events/propose" variant="ghost-dark" size="md">
+          <ButtonLink href="/events/propose" variant="ghost-light" size="md">
             Предложить событие
           </ButtonLink>
         )}
-        <Button variant="ghost-dark" size="md" onClick={invite}>
+        <Button variant="ghost-light" size="md" onClick={invite}>
           {copied ? "Ссылка скопирована" : "Позвать друзей"}
         </Button>
-        <ButtonLink href="/events" variant="ghost-dark" size="md">
+        <ButtonLink href="/events" variant="ghost-light" size="md">
           Все события
         </ButtonLink>
       </div>

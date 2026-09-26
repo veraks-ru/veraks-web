@@ -121,23 +121,23 @@ function BoardCard({
   const stamp =
     leaving && leaving !== "up" ? GRADES[indexOfGrade(gradeForDirection(leaving))].label : SWIPE_LABELS.up;
   const stampColor =
-    leaving === "left" ? "var(--color-cool)" : leaving === "right" ? "var(--color-warm)" : "var(--color-haze)";
+    leaving === "left" ? "var(--color-cool-ink)" : leaving === "right" ? "var(--color-warm-ink)" : "var(--color-slate)";
 
   return (
     <li
       className={`relative transition-[opacity,transform] duration-200 ${leaving ? "scale-95 opacity-0" : ""}`}
       aria-hidden={!!leaving || undefined}
     >
-      <article className="flex h-full flex-col rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/85 p-5">
+      <article className="flex h-full flex-col rounded-[1.5rem] border border-line bg-surface p-5 shadow-[0_10px_30px_-22px_rgba(20,23,28,0.4)]">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="truncate rounded-full bg-white/10 px-2.5 py-1 font-600 text-haze">{card.category.title}</span>
+          <span className="truncate rounded-full bg-paper px-2.5 py-1 font-600 text-slate">{card.category.title}</span>
           <span className="flex shrink-0 items-center gap-1.5">
-            <span className="font-600 text-warm">{deadlineLabel(card.closesAt)}</span>
+            <span className="font-600 text-[color:var(--color-warm-ink)]">{deadlineLabel(card.closesAt)}</span>
             <button
               type="button"
               onClick={onDetails}
               aria-label="Подробнее"
-              className="-my-1 flex size-9 items-center justify-center rounded-full border border-[color:var(--color-edge)] text-signal"
+              className="-my-1 flex size-9 items-center justify-center rounded-full border border-line text-[color:var(--color-signal-deep)]"
             >
               <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
                 <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.75" />
@@ -147,29 +147,28 @@ function BoardCard({
           </span>
         </div>
 
-        <h3 className="mt-3 line-clamp-4 font-display text-[1.1rem] leading-[1.25] font-600 text-balance text-white">
+        <h3 className="mt-3 line-clamp-4 font-display text-[1.1rem] leading-[1.25] font-600 text-balance text-graphite">
           {card.title}
         </h3>
         {card.description && (
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-haze">{card.description}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate">{card.description}</p>
         )}
 
-        <div className="mt-auto border-t border-[color:var(--color-edge)] pt-3">
+        <div className="mt-auto border-t border-line pt-3">
           {card.forecasters > 0 ? (
             <MiniConsensus
               crowd={card.crowd}
-              tone="dark"
-              aside={<span className="num shrink-0 text-haze-dim">{nPeople(card.forecasters)}</span>}
+              aside={<span className="num shrink-0 text-slate">{nPeople(card.forecasters)}</span>}
             />
           ) : (
-            <p className="text-xs text-haze">Никто ещё не высказался — ваш прогноз будет первым.</p>
+            <p className="text-xs text-slate">Никто ещё не высказался — ваш прогноз будет первым.</p>
           )}
           <div className="mt-3 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => decide("left")}
               disabled={disabled}
-              className="h-10 rounded-full border-2 border-[color:var(--color-cool)] px-4 text-sm font-700 text-[color:var(--color-cool)] transition-colors hover:bg-[color:var(--color-cool)]/10 disabled:opacity-40"
+              className="h-10 rounded-full border-2 border-[color:var(--color-cool-ink)] px-4 text-sm font-700 text-[color:var(--color-cool-ink)] transition-colors hover:bg-[color:var(--color-cool)]/15 disabled:opacity-40"
             >
               {SWIPE_LABELS.left}
             </button>
@@ -177,7 +176,7 @@ function BoardCard({
               type="button"
               onClick={() => decide("up")}
               disabled={disabled}
-              className="h-10 rounded-full px-3 text-sm font-600 text-haze-dim transition-colors hover:text-white disabled:opacity-40"
+              className="h-10 rounded-full px-3 text-sm font-600 text-slate transition-colors hover:text-graphite disabled:opacity-40"
             >
               {SWIPE_LABELS.up}
             </button>
@@ -185,7 +184,7 @@ function BoardCard({
               type="button"
               onClick={() => decide("right")}
               disabled={disabled}
-              className="h-10 rounded-full border-2 border-[color:var(--color-warm)] px-4 text-sm font-700 text-[color:var(--color-warm)] transition-colors hover:bg-[color:var(--color-warm)]/10 disabled:opacity-40"
+              className="h-10 rounded-full border-2 border-[color:var(--color-warm-ink)] px-4 text-sm font-700 text-[color:var(--color-warm-ink)] transition-colors hover:bg-[color:var(--color-warm)]/15 disabled:opacity-40"
             >
               {SWIPE_LABELS.right}
             </button>

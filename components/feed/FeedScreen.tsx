@@ -8,7 +8,6 @@ import { Toast, type ToastData } from "@/components/ui/Toast";
 import { useAuth } from "@/components/app/AuthProvider";
 import { ApiError } from "@/lib/api/client";
 import { putPrediction } from "@/lib/api/endpoints";
-import { useDarkChrome } from "@/lib/chromeTone";
 import { GRADES, indexOfGrade } from "@/lib/confidence";
 import { UNDO_MS, gradeForDirection, type SwipeDecision, type SwipeDirection } from "@/lib/feed";
 import {
@@ -58,7 +57,6 @@ const countWaiting = (): number => readOutbox().filter((e) => e.owner === GUEST_
  * может измениться отменой.
  */
 export function FeedScreen() {
-  useDarkChrome();
   const router = useRouter();
   const { me, loading: authLoading, subscribed, refresh } = useAuth();
   // Широкий экран — доска карточек с кнопками; телефон — стопка со свайпом.
@@ -321,10 +319,10 @@ export function FeedScreen() {
 
   if (wide) {
     return (
-      <main className="bg-oracle grain min-h-dvh overflow-x-clip text-white">
+      <main className="min-h-dvh overflow-x-clip bg-paper text-graphite">
         <h1 className="sr-only">Лента прогнозов</h1>
         <div inert={sheetOpen || undefined}>
-          <TopNav tone="dark" active="/" />
+          <TopNav active="/" />
           <div className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8">
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
               <div className="min-w-0 flex-1">
@@ -388,7 +386,7 @@ export function FeedScreen() {
   }
 
   return (
-    <main className="bg-oracle grain flex min-h-[calc(100dvh-3.75rem-env(safe-area-inset-bottom))] flex-col overflow-x-clip text-white md:min-h-dvh">
+    <main className="flex min-h-[calc(100dvh-3.75rem-env(safe-area-inset-bottom))] flex-col overflow-x-clip bg-paper text-graphite md:min-h-dvh">
       <h1 className="sr-only">Лента прогнозов</h1>
       <div
         inert={sheetOpen || undefined}
@@ -410,7 +408,7 @@ export function FeedScreen() {
           className="relative mt-4 min-h-[18rem] flex-1 md:h-[32rem] md:flex-none"
           aria-label="Стопка событий"
         >
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-10 -z-[1] opacity-20">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-10 -z-[1] opacity-30">
             <OracleArc activeIndex={null} className="w-full" />
           </div>
 
@@ -462,14 +460,14 @@ function BoardSkeleton() {
       {Array.from({ length: 8 }).map((_, i) => (
         <li
           key={i}
-          className="h-64 animate-pulse rounded-[1.5rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/60 p-5"
+          className="h-64 animate-pulse rounded-[1.5rem] border border-line bg-surface p-5"
         >
           <div className="flex justify-between">
-            <span className="h-6 w-20 rounded-full bg-white/10" />
-            <span className="h-6 w-16 rounded-full bg-white/10" />
+            <span className="h-6 w-20 rounded-full bg-line" />
+            <span className="h-6 w-16 rounded-full bg-line" />
           </div>
-          <span className="mt-5 block h-5 w-11/12 rounded bg-white/10" />
-          <span className="mt-2 block h-5 w-3/4 rounded bg-white/10" />
+          <span className="mt-5 block h-5 w-11/12 rounded bg-line" />
+          <span className="mt-2 block h-5 w-3/4 rounded bg-line" />
         </li>
       ))}
     </ul>
@@ -479,18 +477,18 @@ function BoardSkeleton() {
 function CardSkeleton() {
   return (
     <div
-      className="absolute inset-0 animate-pulse rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/60 p-6"
+      className="absolute inset-0 animate-pulse rounded-[1.75rem] border border-line bg-surface p-6"
       role="status"
       aria-label="Загружаем события"
     >
       <div className="flex justify-between">
-        <span className="h-6 w-24 rounded-full bg-white/10" />
-        <span className="h-6 w-20 rounded-full bg-white/10" />
+        <span className="h-6 w-24 rounded-full bg-line" />
+        <span className="h-6 w-20 rounded-full bg-line" />
       </div>
-      <span className="mt-6 block h-7 w-11/12 rounded-lg bg-white/10" />
-      <span className="mt-2.5 block h-7 w-3/4 rounded-lg bg-white/10" />
-      <span className="mt-5 block h-4 w-full rounded bg-white/5" />
-      <span className="mt-2 block h-4 w-5/6 rounded bg-white/5" />
+      <span className="mt-6 block h-7 w-11/12 rounded-lg bg-line" />
+      <span className="mt-2.5 block h-7 w-3/4 rounded-lg bg-line" />
+      <span className="mt-5 block h-4 w-full rounded bg-paper" />
+      <span className="mt-2 block h-4 w-5/6 rounded bg-paper" />
     </div>
   );
 }
@@ -499,13 +497,13 @@ function ErrorCard({ kind, onRetry }: { kind: "network" | "generic"; onRetry: ()
   return (
     <div
       role="alert"
-      className="absolute inset-0 flex flex-col items-center justify-center rounded-[1.75rem] border border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)]/60 p-6 text-center"
+      className="absolute inset-0 flex flex-col items-center justify-center rounded-[1.75rem] border border-line bg-surface p-6 text-center"
     >
-      <OracleArc activeIndex={null} className="w-36 opacity-60" />
-      <p className="mt-5 font-display text-xl font-600">
+      <OracleArc activeIndex={null} className="w-36 opacity-70" />
+      <p className="mt-5 font-display text-xl font-600 text-graphite">
         {kind === "network" ? "Сигнала нет" : "Не удалось загрузить события"}
       </p>
-      <p className="mt-2 max-w-xs text-sm leading-relaxed text-haze">
+      <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate">
         {kind === "network"
           ? "Показания появятся, как только вернётся сеть."
           : "Что-то на нашей стороне. Попробуйте ещё раз через минуту."}
@@ -513,7 +511,7 @@ function ErrorCard({ kind, onRetry }: { kind: "network" | "generic"; onRetry: ()
       <button
         type="button"
         onClick={onRetry}
-        className="mt-6 min-h-11 rounded-full bg-signal px-5 text-sm font-700 text-ink-3"
+        className="mt-6 min-h-11 rounded-full bg-graphite px-5 text-sm font-700 text-white hover:bg-black"
       >
         Проверить снова
       </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useChromeTone } from "@/lib/chromeTone";
 
 const DISMISSED_KEY = "veraks:install-dismissed";
@@ -41,9 +42,11 @@ function isIosSafari(): boolean {
 export function InstallPrompt() {
   const [deferred, setDeferred] = useState<InstallEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
-  // На тёмных экранах (лента, открытое событие) кнопки действия стоят внизу,
-  // поэтому подсказка встаёт сверху и в тёмном исполнении.
+  // На тёмных экранах подсказка в тёмном исполнении. На ленте (и на открытом
+  // событии) кнопки действия стоят внизу, поэтому там она встаёт сверху.
   const dark = useChromeTone() === "dark";
+  const onFeed = usePathname() === "/";
+  const top = dark || onFeed;
 
   useEffect(() => {
     if (isStandalone()) return;
@@ -91,7 +94,7 @@ export function InstallPrompt() {
   return (
     <div
       className={`fixed inset-x-0 z-40 px-3 ${
-        dark
+        top
           ? "top-[calc(env(safe-area-inset-top)+0.75rem)]"
           : "bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:bottom-4"
       }`}

@@ -4,7 +4,7 @@ import { SWIPE_LABELS, type SwipeDirection } from "@/lib/feed";
 
 /**
  * Те же три ответа, что и жестом, — для тех, кому удобнее нажать, и для
- * доступности. Кольца в цветах спектра убеждения: cool — нет, warm — да.
+ * доступности. Кольца в чернильных тонах спектра: cool-ink — нет, warm-ink — да.
  */
 export function SwipeButtons({
   onSwipe,
@@ -37,9 +37,9 @@ export function SwipeButtons({
 // На низких экранах (телефон в браузере с панелями) кнопки меньше, подписи
 // прячутся — иначе ряд уезжает под нижнюю панель.
 const RING: Record<SwipeDirection, string> = {
-  left: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-cool)] text-[color:var(--color-cool)]",
-  right: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-warm)] text-[color:var(--color-warm)]",
-  up: "size-12 [@media(max-height:600px)]:size-10 border-[color:var(--color-edge)] text-haze",
+  left: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-cool-ink)] text-[color:var(--color-cool-ink)]",
+  right: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-warm-ink)] text-[color:var(--color-warm-ink)]",
+  up: "size-12 [@media(max-height:600px)]:size-10 border-line text-slate",
 };
 
 function Round({
@@ -60,11 +60,11 @@ function Round({
         aria-label={SWIPE_LABELS[dir]}
         disabled={disabled}
         onClick={onClick}
-        className={`flex items-center justify-center rounded-full border-2 bg-[color:var(--color-ink-2)]/60 transition-transform active:scale-95 disabled:opacity-40 ${RING[dir]}`}
+        className={`flex items-center justify-center rounded-full border-2 bg-surface shadow-sm transition-transform active:scale-95 disabled:opacity-40 ${RING[dir]}`}
       >
         {children}
       </button>
-      <span className="text-[0.7rem] font-600 text-haze-dim [@media(max-height:600px)]:hidden">
+      <span className="text-[0.7rem] font-600 text-slate [@media(max-height:600px)]:hidden">
         {SWIPE_LABELS[dir]}
       </span>
     </span>
