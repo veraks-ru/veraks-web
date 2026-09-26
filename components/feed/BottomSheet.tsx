@@ -6,7 +6,8 @@ const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /**
- * Шторка снизу тёмной среды: детали события, вход гостя.
+ * Шторка снизу тёмной среды: детали события, вход гостя. На широком экране
+ * (от md) та же панель стоит в центре как обычный диалог, без «ручки».
  *
  * Как у диалога: фокус переходит внутрь, Tab ходит по кругу, Esc и тап по
  * фону закрывают, после закрытия фокус возвращается туда, откуда пришёл.
@@ -83,9 +84,9 @@ export function BottomSheet({
         role="dialog"
         aria-modal="true"
         aria-label={label}
-        className="pb-safe absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[1.75rem] border-t border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)] px-5 pt-3 text-white shadow-2xl outline-none sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2"
+        className="pb-safe absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[1.75rem] border-t border-[color:var(--color-edge)] bg-[color:var(--color-ink-2)] px-5 pt-3 text-white shadow-2xl outline-none md:inset-auto md:top-1/2 md:left-1/2 md:w-full md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[1.75rem] md:border md:px-7 md:pt-7"
       >
-        <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-white/20" />
+        <span aria-hidden className="mx-auto mb-4 block h-1 w-9 rounded-full bg-white/20 md:hidden" />
         <div className="pb-6">{children}</div>
       </div>
     </div>
