@@ -100,14 +100,17 @@ export function SwipeCard({
           </span>
         </div>
 
-        <h2 className={`mt-4 line-clamp-5 font-display font-600 text-balance text-graphite ${titleSize}`}>
+        <h2 className={`mt-3 shrink-0 line-clamp-5 font-display font-600 text-balance text-graphite ${titleSize}`}>
           {card.title}
         </h2>
 
+        {/* Показ описания переключает обёртка: display на самом абзаце сломал
+            бы line-clamp, который держится на display:-webkit-box. На низких
+            экранах описания нет — оно есть в «Подробнее». */}
         {card.description && (
-          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate hidden [@media(min-height:700px)]:block">
-            {card.description}
-          </p>
+          <div className="hidden min-h-0 [@media(min-height:700px)]:block">
+            <p className="mt-2.5 line-clamp-3 text-sm leading-relaxed text-slate">{card.description}</p>
+          </div>
         )}
 
         <div className="mt-auto shrink-0 border-t border-line pt-3">
