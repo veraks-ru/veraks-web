@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type MutableRefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from "react";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { deadlineLabel, nPeople } from "@/lib/format";
 import { SWIPE_LABELS, type SwipeDirection } from "@/lib/feed";
@@ -26,6 +26,7 @@ export function SwipeCard({
   onDecide,
   onGone,
   onDetails,
+  onOpen,
   flyRef,
 }: {
   card: FeedCard;
@@ -36,12 +37,15 @@ export function SwipeCard({
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: () => void;
+  /** Тап по карточке — на страницу события. */
+  onOpen: () => void;
   /** Экран дёргает верхнюю карточку с клавиатуры и кнопок через этот ref. */
   flyRef: MutableRefObject<((dir: SwipeDirection) => void) | null>;
 }) {
   const swipe = useSwipe({
     onDecide: (dir) => onDecide(dir, card),
     onGone: (dir) => onGone(dir, card),
+    onTap: onOpen,
     disabled: disabled || !top,
     enterFrom: top ? enterFrom : null,
   });
@@ -53,6 +57,27 @@ export function SwipeCard({
       if (flyRef.current === swipe.fly) flyRef.current = null;
     };
   }, [top, swipe.fly, flyRef]);
+
+  // Описание занимает всё, что осталось между заголовком и блоком толпы:
+  // число строк считается по фактической высоте, последняя — с многоточием.
+  // Когда места нет и на одну строку, описания нет (оно есть в «Подробнее»).
+  const descBox = useRef<HTMLDivElement>(null);
+  const descText = useRef<HTMLParagraphElement>(null);
+  const [descLines, setDescLines] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const box = descBox.current;
+    const text = descText.current;
+    if (!box || !text) return;
+    const fit = () => {
+      const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 22;
+      const lines = Math.max(0, Math.floor(box.clientHeight / lineHeight));
+      setDescLines((prev) => (prev === lines ? prev : lines));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
 
   // Реальные формулировки бывают в пять строк: чем длиннее, тем мельче
   // кегль, и жёсткий предел строк, чтобы карточка не разъезжалась.
@@ -104,12 +129,18 @@ export function SwipeCard({
           {card.title}
         </h2>
 
-        {/* Показ описания переключает обёртка: display на самом абзаце сломал
-            бы line-clamp, который держится на display:-webkit-box. На низких
-            экранах описания нет — оно есть в «Подробнее». */}
         {card.description && (
-          <div className="hidden min-h-0 [@media(min-height:700px)]:block">
-            <p className="mt-2.5 line-clamp-3 text-sm leading-relaxed text-slate">{card.description}</p>
+          <div ref={descBox} className="mt-2.5 min-h-0 flex-1">
+            <p
+              ref={descText}
+              className="line-clamp-3 text-sm leading-relaxed text-slate"
+              style={{
+                WebkitLineClamp: descLines ?? 3,
+                display: descLines === 0 ? "none" : undefined,
+              }}
+            >
+              {card.description}
+            </p>
           </div>
         )}
 

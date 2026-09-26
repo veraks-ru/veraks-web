@@ -19,6 +19,7 @@ export function CardStack({
   onDecide,
   onGone,
   onDetails,
+  onOpen,
   flyRef,
 }: {
   cards: FeedCard[];
@@ -27,6 +28,7 @@ export function CardStack({
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: (card: FeedCard) => void;
+  onOpen: (card: FeedCard) => void;
   flyRef: MutableRefObject<((dir: SwipeDirection) => void) | null>;
 }) {
   return (
@@ -44,6 +46,7 @@ export function CardStack({
           onDecide={onDecide}
           onGone={onGone}
           onDetails={() => onDetails(card)}
+          onOpen={() => onOpen(card)}
           flyRef={flyRef}
         />
       ))}

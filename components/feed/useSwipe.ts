@@ -35,6 +35,8 @@ interface Options {
   onDecide: (dir: SwipeDirection) => boolean | void;
   /** Карточка скрылась за экраном — стопку можно двигать. */
   onGone: (dir: SwipeDirection) => void;
+  /** Тап без сдвига (не по кнопке или ссылке внутри). */
+  onTap?: () => void;
   disabled?: boolean;
   /** Возврат после «Отменить»: карточка въезжает с той стороны, куда улетала. */
   enterFrom?: SwipeDirection | null;
@@ -74,7 +76,7 @@ export const swipeBaseStyle: CSSProperties = {
 
 type Sample = { x: number; y: number; t: number };
 
-export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null }: Options) {
+export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom = null }: Options) {
   const ref = useRef<HTMLDivElement>(null);
   const phase = useRef<Phase>("idle");
   const flying = useRef<SwipeDirection | null>(null);
@@ -83,9 +85,11 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decide = useRef(onDecide);
   const gone = useRef(onGone);
+  const tap = useRef(onTap);
   const off = useRef(disabled);
   decide.current = onDecide;
   gone.current = onGone;
+  tap.current = onTap;
   off.current = disabled;
 
   const setVars = useCallback((left: number, right: number, up: number) => {
@@ -231,7 +235,9 @@ export function useSwipe({ onDecide, onGone, disabled = false, enterFrom = null 
       if (!s || e.pointerId !== s.id) return;
       start.current = null;
       if (phase.current !== "dragging") {
-        phase.current = "idle"; // тап без сдвига — ничего
+        const wasTap = phase.current === "armed";
+        phase.current = "idle";
+        if (wasTap) tap.current?.(); // тап без сдвига — открыть событие
         return;
       }
       const release = { x: e.clientX, y: e.clientY, t: performance.now() };

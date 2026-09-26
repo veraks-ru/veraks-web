@@ -424,6 +424,7 @@ export function FeedScreen() {
               onDecide={onDecide}
               onGone={onGone}
               onDetails={setDetails}
+              onOpen={(card) => router.push(`/events/${card.slug}`)}
               flyRef={flyRef}
             />
           ) : (

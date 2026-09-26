@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { deadlineLabel, nPeople } from "@/lib/format";
 import { GRADES, indexOfGrade } from "@/lib/confidence";
@@ -148,7 +149,9 @@ function BoardCard({
         </div>
 
         <h3 className="mt-3 line-clamp-4 font-display text-[1.1rem] leading-[1.25] font-600 text-balance text-graphite">
-          {card.title}
+          <Link href={`/events/${card.slug}`} className="hover:text-[color:var(--color-signal-deep)]">
+            {card.title}
+          </Link>
         </h3>
         {card.description && (
           <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate">{card.description}</p>
