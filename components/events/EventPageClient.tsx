@@ -119,6 +119,9 @@ function VoidedEvent({ event }: { event: PredictionEvent }) {
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 sm:text-3xl">
           {event.title}
         </h1>
+        {event.description && (
+          <p className="mt-3 text-[0.97rem] leading-relaxed text-slate">{event.description}</p>
+        )}
 
         <section className="mt-5 rounded-[var(--radius-card)] border border-line bg-surface p-6">
           <p className="font-display text-xl font-600">
@@ -184,6 +187,9 @@ function PendingEvent({ event }: { event: PredictionEvent }) {
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 sm:text-3xl">
           {event.title}
         </h1>
+        {event.description && (
+          <p className="mt-3 text-[0.97rem] leading-relaxed text-slate">{event.description}</p>
+        )}
         <p className="mt-4 rounded-xl border border-line bg-surface p-4 text-sm text-slate">
           Приём прогнозов закрыт. Событие разрешается по источнику — результат появится
           здесь после проверки и окна оспаривания.

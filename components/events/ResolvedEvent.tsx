@@ -41,6 +41,9 @@ export function ResolvedEvent({ event }: { event: PredictionEvent }) {
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 sm:text-3xl">
           {event.title}
         </h1>
+        {event.description && (
+          <p className="mt-3 text-[0.97rem] leading-relaxed text-slate">{event.description}</p>
+        )}
 
         {/* Вердикт исхода */}
         <Verdict outcome={outcome} event={event} />

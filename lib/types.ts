@@ -23,6 +23,8 @@ export interface PredictionEvent {
   slug: string;
   /** Формулировка исхода ДА (PRD §4.2) */
   title: string;
+  /** Контекст события: что происходит и почему вопрос стоит именно так. */
+  description: string;
   categorySlug: string;
   status: EventStatus;
   opensAt: string;

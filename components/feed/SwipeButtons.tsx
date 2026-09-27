@@ -4,7 +4,7 @@ import { SWIPE_LABELS, type SwipeDirection } from "@/lib/feed";
 
 /**
  * Те же три ответа, что и жестом, — для тех, кому удобнее нажать, и для
- * доступности. Кольца в чернильных тонах спектра: cool-ink — нет, warm-ink — да.
+ * доступности. Кольца: «Нет» красное, «Да» зелёное (решение владельца).
  */
 export function SwipeButtons({
   onSwipe,
@@ -37,8 +37,8 @@ export function SwipeButtons({
 // На низких экранах (телефон в браузере с панелями) кнопки меньше, подписи
 // прячутся — иначе ряд уезжает под нижнюю панель.
 const RING: Record<SwipeDirection, string> = {
-  left: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-cool-ink)] text-[color:var(--color-cool-ink)]",
-  right: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-warm-ink)] text-[color:var(--color-warm-ink)]",
+  left: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-no)] text-[color:var(--color-no-ink)]",
+  right: "size-14 [@media(max-height:600px)]:size-12 border-[color:var(--color-yes)] text-[color:var(--color-yes-ink)]",
   up: "size-12 [@media(max-height:600px)]:size-10 border-line text-slate",
 };
 

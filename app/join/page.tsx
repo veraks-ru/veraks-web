@@ -187,7 +187,7 @@ function JoinCard({ providers, next }: { providers: ProvidersState; next: string
         <Link href="/legal/pdn" className="text-haze underline underline-offset-2 hover:text-white">
           обработку персональных данных
         </Link>
-        . Участие в конкурсе — бесплатное.
+        . Прогнозы принимаются по подписке или приглашению.
       </p>
     </>
   );

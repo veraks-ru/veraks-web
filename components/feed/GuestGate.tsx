@@ -33,15 +33,17 @@ export function GuestGate({
       {decision && word ? (
         <p className="mt-2 text-sm leading-relaxed text-haze">
           «{decision.card.title}» — <span className="font-600 text-white">{word}</span>. Запишем сразу
-          после входа. Участие бесплатное.
+          после входа. Прогнозы принимаются по подписке или приглашению.
         </p>
       ) : waiting > 0 ? (
         <p className="mt-2 text-sm leading-relaxed text-haze">
-          Ваши ответы ждут входа и запишутся сразу после него. Участие бесплатное.
+          Ваши ответы ждут входа и запишутся сразу после него. Прогнозы принимаются по
+          подписке или приглашению.
         </p>
       ) : (
         <p className="mt-2 text-sm leading-relaxed text-haze">
-          Участие бесплатное: вход нужен, чтобы вести свой трек-рекорд.
+          Вход нужен, чтобы вести свой трек-рекорд. Прогнозы принимаются по подписке или
+          приглашению.
         </p>
       )}
 

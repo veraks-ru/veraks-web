@@ -34,6 +34,7 @@ import { EndOfStack } from "./EndOfStack";
 import { FeedBoard } from "./FeedBoard";
 import { CategoryStrip, DailyCounter, FeedHeader, GuestLine } from "./FeedHeader";
 import { GuestGate } from "./GuestGate";
+import { SubscriptionSheet } from "./SubscriptionSheet";
 import { SwipeButtons } from "./SwipeButtons";
 import { useFeed } from "./useFeed";
 import { usePendingSubmits } from "./usePendingSubmits";
@@ -85,6 +86,9 @@ export function FeedScreen() {
 
   const [details, setDetails] = useState<FeedCard | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
+  /** Сервер ответил 402: нужна подписка или приглашение. `card` — чей ответ не записан
+   *  (null — ответы из ящика, накопленные до входа). */
+  const [subscriptionAsk, setSubscriptionAsk] = useState<{ card: FeedCard | null } | null>(null);
   const [gateDecision, setGateDecision] = useState<{ card: FeedCard; direction: SwipeDecision } | null>(null);
   const [enterFrom, setEnterFrom] = useState<SwipeDirection | null>(null);
   const [dailyCount, setDailyCount] = useState(0);
@@ -112,6 +116,7 @@ export function FeedScreen() {
     onCommitted: () => setDailyCount(bumpDailyCount()),
     onClosed: (p) => say(`Приём по «${p.card.title}» уже закрыт`, { durationMs: 4000 }),
     onRejected: (p) => say(`Ответ по «${p.card.title}» не принят`, { durationMs: 4000 }),
+    onSubscriptionRequired: (p) => setSubscriptionAsk({ card: p.card }),
     onConsentRequired: () => router.push(withNext("/onboarding", "/")),
     onUnauthorized: () => {
       void refresh(); // сессии больше нет — лента переключится на гостя
@@ -218,6 +223,7 @@ export function FeedScreen() {
     replaying.current = true;
     (async () => {
       let ok = 0;
+      let needSub = false;
       for (const e of entries) {
         if (isOutboxEntryStale(e)) {
           removeFromOutbox(e.eventId);
@@ -233,6 +239,12 @@ export function FeedScreen() {
         } catch (err) {
           const api = err instanceof ApiError ? err : null;
           if (api?.status === 401 || api?.status === 403) break; // сначала войти/согласиться
+          if (api?.status === 402) {
+            // Подписки или приглашения нет: ответы не примут, покажем тарифы.
+            removeFromOutbox(e.eventId);
+            needSub = true;
+            continue;
+          }
           if (api && api.status >= 400 && api.status < 500) {
             // Приём закрылся (409) или ответ не примут никогда — не прогноз.
             removeFromOutbox(e.eventId);
@@ -242,6 +254,7 @@ export function FeedScreen() {
         }
       }
       setWaiting(countWaiting());
+      if (needSub) setSubscriptionAsk({ card: null });
       if (ok > 0) {
         say(`${ok} ${pluralize(ok, ["ответ засчитан", "ответа засчитаны", "ответов засчитаны"])}`, {
           durationMs: 4000,
@@ -254,7 +267,7 @@ export function FeedScreen() {
   /* ── Клавиатура ── */
 
   const topCard = feed.cards[0] ?? null;
-  const sheetOpen = gateOpen || !!details;
+  const sheetOpen = gateOpen || !!details || !!subscriptionAsk;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -307,6 +320,11 @@ export function FeedScreen() {
         {live}
       </p>
       <DetailsSheet card={details} onClose={closeDetails} />
+      <SubscriptionSheet
+        open={!!subscriptionAsk}
+        card={subscriptionAsk?.card ?? null}
+        onClose={() => setSubscriptionAsk(null)}
+      />
       <GuestGate
         open={gateOpen}
         decision={gateDecision}

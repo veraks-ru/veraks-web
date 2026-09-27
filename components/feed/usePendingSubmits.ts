@@ -23,6 +23,8 @@ interface Callbacks {
   onClosed: (p: PendingSubmit) => void;
   /** Сервер отверг насовсем (404, 422, чужой 403) — из ящика убрано. */
   onRejected: (p: PendingSubmit) => void;
+  /** Нет подписки или приглашения (402) — из ящика убрано, нужен тариф. */
+  onSubscriptionRequired: (p: PendingSubmit) => void;
   /** Согласия не подтверждены (403) — запись ждёт в ящике. */
   onConsentRequired: () => void;
   /** Сессии нет (401) — запись ждёт в ящике. */
@@ -70,6 +72,11 @@ export function usePendingSubmits(cb: Callbacks) {
       }
       if (api?.status === 401) {
         cbRef.current.onUnauthorized();
+        return;
+      }
+      if (api?.status === 402) {
+        removeFromOutbox(entry.card.id);
+        cbRef.current.onSubscriptionRequired(entry);
         return;
       }
       if (api && api.status >= 400 && api.status < 500) {

@@ -21,7 +21,7 @@ import type { PredictionEvent } from "@/lib/types";
 
 type Phase = "edit" | "submitting" | "done";
 /** Чем закончилась неудачная отправка: нет согласий (403) или прочий сбой. */
-type SubmitError = "consent" | "generic";
+type SubmitError = "consent" | "subscription" | "generic";
 
 export function PredictExperience({ event }: { event: PredictionEvent }) {
   useDarkChrome(); // нижняя панель подстраивается под тёмный экран
@@ -48,7 +48,8 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
       // предлагаем «попробовать ещё раз».
       const consent =
         e instanceof ApiError && e.status === 403 && e.code === "ConsentRequiredError";
-      setError(consent ? "consent" : "generic");
+      const subscription = e instanceof ApiError && e.status === 402;
+      setError(consent ? "consent" : subscription ? "subscription" : "generic");
       setPhase("edit");
     }
   }
@@ -77,6 +78,9 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
         <h1 className="mt-4 font-display text-2xl leading-snug font-600 text-balance sm:text-[1.75rem]">
           {event.title}
         </h1>
+        {event.description && (
+          <p className="mt-3 text-[0.97rem] leading-relaxed text-haze">{event.description}</p>
+        )}
 
         <SourceDisclosure event={event} />
 
@@ -121,7 +125,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
         </section>
 
 
-        {/* Действие — гейт только по входу (участие бесплатно). */}
+        {/* Действие: гость видит вход; без подписки/приглашения сервер ответит 402. */}
         <div className="mt-6">
           {/* Пока сессия проверяется, не утверждаем «войдите» — данные события
               приходят раньше ответа /me, и вошедший на миг видел бы гейт гостя
@@ -129,7 +133,7 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           {authLoading ? null : !me ? (
             <GatePanel
               title="Войдите, чтобы голосовать"
-              note="Участвовать можно бесплатно. Войдите, чтобы сделать свой прогноз."
+              note="Войдите, чтобы сделать свой прогноз. Прогнозы принимаются по подписке или приглашению."
               cta="Войти"
               href="/join"
             />
@@ -168,6 +172,14 @@ export function PredictExperience({ event }: { event: PredictionEvent }) {
           {error === "generic" && (
             <p className="mt-3 text-center text-sm text-warm" role="alert">
               Не удалось сохранить. Попробуйте ещё раз.
+            </p>
+          )}
+          {error === "subscription" && (
+            <p className="mt-3 text-center text-sm text-warm" role="alert">
+              Прогнозы принимаются по подписке или приглашению.{" "}
+              <Link href="/pricing" className="font-600 text-white underline">
+                Тарифы
+              </Link>
             </p>
           )}
           {error === "consent" && (

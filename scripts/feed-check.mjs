@@ -55,7 +55,7 @@ const CARDS = [
 const ME = { id: "u1", username: "kalibr", display_name: "Калибр", role: "user", status: "active", needs_onboarding: false, missing_consents: [], email: "k@example.com", identity_verified: false };
 
 /** Подмена API. feed(cursor) → { json } | { status }. Возвращает журнал запросов. */
-async function mockApi(ctx, { me, feed }) {
+async function mockApi(ctx, { me, feed, putStatus = 200 }) {
   const log = { puts: [], feed: [] };
   await ctx.route(`${API}/**`, async (route) => {
     const url = new URL(route.request().url());
@@ -74,6 +74,7 @@ async function mockApi(ctx, { me, feed }) {
     if (m === "PUT" && /^\/events\/[^/]+\/prediction$/.test(p)) {
       const body = route.request().postDataJSON();
       log.puts.push({ event: p.split("/")[2], grade: body.confidence_grade, at: Date.now() });
+      if (putStatus !== 200) return route.fulfill({ status: putStatus, json: { error: "PredictionSubscriptionRequiredError", detail: "mock" } });
       return route.fulfill({ json: { id: "p", user_id: "u", event_id: p.split("/")[2], confidence_grade: body.confidence_grade, probability: "0.70", is_locked: false, brier_score: null, scored_at: null, created_at: iso(now), updated_at: iso(now) } });
     }
     if (p === "/auth/providers") return route.fulfill({ json: { email: true, esia: false } });
@@ -93,7 +94,7 @@ async function open(browser, opts) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !/status of (401|404|500)/.test(msg.text())) errors.push(msg.text());
+    if (msg.type() === "error" && !/status of (401|402|404|500)/.test(msg.text())) errors.push(msg.text());
   });
   await page.goto(`${base}/`, { waitUntil: "networkidle" });
   await page.waitForSelector("article, [role=alert]", { timeout: 15000 });
@@ -146,6 +147,30 @@ const browser = await chromium.launch();
   check(outbox.length === 1 && outbox[0].owner === "guest" && outbox[0].grade === "definitely_yes", `ящик гостя: ${JSON.stringify(outbox.map((e) => [e.eventId, e.grade, e.owner]))}`);
   check(/1 ответ ждёт входа/.test(await page.locator("header").textContent()), "в шапке «1 ответ ждёт входа»");
   await page.screenshot({ path: `${out}/guest-4-waiting.png` });
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+/* ── Пользователь без подписки: 402 → шторка с тарифами ── */
+{
+  console.log("\n=== user-402");
+  const s = await open(browser, { me: ME, feed: singlePage(CARDS), putStatus: 402 });
+  const { page, log } = s;
+  await s.dismissInstallHint();
+  await s.drag(170);
+  await page.waitForTimeout(4800);
+  check(log.puts.length === 1, `PUT ушёл один раз (${log.puts.length})`);
+  const dlg = page.locator('[role="dialog"]');
+  check((await dlg.count()) === 1, "402 открыл шторку");
+  const text = (await dlg.textContent().catch(() => "")) ?? "";
+  check(/по подписке/.test(text) && new RegExp(CARDS[0].title.slice(0, 20)).test(text), `в шторке — про подписку и событие: ${text.slice(0, 80)}`);
+  check((await dlg.getByRole("link", { name: "Посмотреть тарифы" }).getAttribute("href")) === "/pricing", "ссылка ведёт на /pricing");
+  const outbox = await page.evaluate(() => JSON.parse(localStorage.getItem("veraks.feed.outbox") || "[]"));
+  check(outbox.length === 0, `ящик после 402 пуст (${outbox.length})`);
+  await page.screenshot({ path: `${out}/user402-1-sheet.png` });
+  await page.getByRole("button", { name: "Смотреть без участия" }).click();
+  await page.waitForTimeout(300);
+  check((await dlg.count()) === 0, "«Смотреть без участия» закрыла шторку");
   check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
   await s.ctx.close();
 }

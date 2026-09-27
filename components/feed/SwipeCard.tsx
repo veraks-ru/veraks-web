@@ -198,8 +198,8 @@ export function SwipeCard({
 
       {top && (
         <>
-          <Stamp side="left" tone="warm-ink" label={SWIPE_LABELS.right} varName="--swipe-right" />
-          <Stamp side="right" tone="cool-ink" label={SWIPE_LABELS.left} varName="--swipe-left" />
+          <Stamp side="left" tone="yes-ink" label={SWIPE_LABELS.right} varName="--swipe-right" />
+          <Stamp side="right" tone="no-ink" label={SWIPE_LABELS.left} varName="--swipe-left" />
           <Stamp side="bottom" tone="slate" label={SWIPE_LABELS.up} varName="--swipe-up" />
         </>
       )}
@@ -210,8 +210,7 @@ export function SwipeCard({
 /**
  * Штамп ответа, проявляющийся по ходу жеста. «Да» слева (карточка едет
  * вправо и открывает левый край), «Нет» справа, «Пропустить» внизу.
- * Чернильные тона спектра убеждения: warm-ink — да, cool-ink — нет; не
- * красный и не зелёный.
+ * «Да» зелёный, «Нет» красный (решение владельца), пропуск нейтральный.
  */
 function Stamp({
   side,
@@ -220,7 +219,7 @@ function Stamp({
   varName,
 }: {
   side: "left" | "right" | "bottom";
-  tone: "warm-ink" | "cool-ink" | "slate";
+  tone: "yes-ink" | "no-ink" | "slate";
   label: string;
   varName: string;
 }) {

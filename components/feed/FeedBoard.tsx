@@ -122,7 +122,7 @@ function BoardCard({
   const stamp =
     leaving && leaving !== "up" ? GRADES[indexOfGrade(gradeForDirection(leaving))].label : SWIPE_LABELS.up;
   const stampColor =
-    leaving === "left" ? "var(--color-cool-ink)" : leaving === "right" ? "var(--color-warm-ink)" : "var(--color-slate)";
+    leaving === "left" ? "var(--color-no-ink)" : leaving === "right" ? "var(--color-yes-ink)" : "var(--color-slate)";
 
   return (
     <li
@@ -171,7 +171,7 @@ function BoardCard({
               type="button"
               onClick={() => decide("left")}
               disabled={disabled}
-              className="h-10 rounded-full border-2 border-[color:var(--color-cool-ink)] px-4 text-sm font-700 text-[color:var(--color-cool-ink)] transition-colors hover:bg-[color:var(--color-cool)]/15 disabled:opacity-40"
+              className="h-10 rounded-full border-2 border-[color:var(--color-no)] px-4 text-sm font-700 text-[color:var(--color-no-ink)] transition-colors hover:bg-[color:var(--color-no)]/10 disabled:opacity-40"
             >
               {SWIPE_LABELS.left}
             </button>
@@ -187,7 +187,7 @@ function BoardCard({
               type="button"
               onClick={() => decide("right")}
               disabled={disabled}
-              className="h-10 rounded-full border-2 border-[color:var(--color-warm-ink)] px-4 text-sm font-700 text-[color:var(--color-warm-ink)] transition-colors hover:bg-[color:var(--color-warm)]/15 disabled:opacity-40"
+              className="h-10 rounded-full border-2 border-[color:var(--color-yes)] px-4 text-sm font-700 text-[color:var(--color-yes-ink)] transition-colors hover:bg-[color:var(--color-yes)]/10 disabled:opacity-40"
             >
               {SWIPE_LABELS.right}
             </button>

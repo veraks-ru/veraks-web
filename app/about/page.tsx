@@ -58,8 +58,8 @@ function Hero() {
         </div>
 
         <p className="mt-5 text-sm text-haze-dim">
-          Участвовать в прогнозах — бесплатно. Подписка открывает расширенную аналитику
-          и предложение событий.{" "}
+          Смотреть события и мнение толпы можно без входа. Прогнозы принимаются по
+          подписке или приглашению.{" "}
           <Link href="/pricing" className="text-signal underline-offset-2 hover:underline">
             Тарифы →
           </Link>

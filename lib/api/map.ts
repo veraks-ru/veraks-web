@@ -62,6 +62,7 @@ export function toPredictionEvent(
     id: ev.id,
     slug: ev.public_code,
     title: ev.title,
+    description: ev.description,
     categorySlug: catSlugById.get(ev.category_id) ?? "",
     status: mapStatus(ev.status),
     opensAt: ev.opens_at,
