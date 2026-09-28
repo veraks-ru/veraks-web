@@ -52,11 +52,13 @@ const CARDS = [
   card(3, "Яндекс выпустит собственный смартфон до конца года?", cats[2], {}, ""),
   card(4, "Курс доллара опустится ниже 80 рублей к Новому году?", cats[0], { definitely_no: 5, definitely_yes: 7 }, ""),
 ];
+const answered = (c, grade) => ({ ...c, my_prediction: { confidence_grade: grade, updated_at: iso(now) } });
+const MINE = [answered(CARDS[0], "definitely_yes"), answered(CARDS[1], "probably_no"), answered(CARDS[2], "fifty_fifty")];
 const ME = { id: "u1", username: "kalibr", display_name: "Калибр", role: "user", status: "active", needs_onboarding: false, missing_consents: [], email: "k@example.com", identity_verified: false };
 
 /** Подмена API. feed(cursor) → { json } | { status }. Возвращает журнал запросов. */
-async function mockApi(ctx, { me, feed, putStatus = 200 }) {
-  const log = { puts: [], feed: [] };
+async function mockApi(ctx, { me, feed, answered = null, putStatus = 200 }) {
+  const log = { puts: [], feed: [], answered: [] };
   await ctx.route(`${API}/**`, async (route) => {
     const url = new URL(route.request().url());
     const m = route.request().method();
@@ -67,6 +69,11 @@ async function mockApi(ctx, { me, feed, putStatus = 200 }) {
     if (p === "/categories") return route.fulfill({ json: cats });
     if (p === "/events/feed") {
       const cursor = url.searchParams.get("cursor");
+      if (url.searchParams.get("answered") === "true") {
+        log.answered.push(cursor);
+        const a = answered ? answered(cursor) : { json: { items: [], next_cursor: null } };
+        return a.json ? route.fulfill({ json: a.json }) : route.fulfill({ status: a.status, json: { detail: "mock" } });
+      }
       log.feed.push(cursor);
       const r = feed(cursor);
       return r.json ? route.fulfill({ json: r.json }) : route.fulfill({ status: r.status, json: { detail: "mock" } });
@@ -244,11 +251,89 @@ const browser = await chromium.launch();
   await page.waitForTimeout(600);
   check((await page.locator('[role="dialog"]').count()) === 0, "Enter на кнопке не открыл детали");
   check((await page.locator("article").count()) === 0, "Enter на «Да» свайпнул последнюю карточку");
-  check(/больше нет/.test(await page.locator("main").textContent()), "показан конец стопки");
+  check(/закончились/.test(await page.locator("main").textContent()), "показан конец стопки");
   await page.screenshot({ path: `${out}/user-4-end.png` });
   await page.waitForTimeout(4600);
   const e4 = log.puts.find((p) => p.event === "e4");
   check(e4?.grade === "definitely_yes", `последний свайп записан как definitely_yes (${JSON.stringify(e4)})`);
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+/* ── Просмотр своих ответов ── */
+{
+  console.log("\n=== review answered");
+  const s = await open(browser, { me: ME, feed: singlePage([CARDS[3]]), answered: singlePage(MINE) });
+  const { page, log } = s;
+  await s.dismissInstallHint();
+  await s.drag(170); // единственная новая карточка — «Да»
+  await page.waitForTimeout(700);
+  check((await page.locator("article").count()) === 0, "новые карточки кончились");
+  const review = page.getByRole("button", { name: "Листать мои ответы" });
+  await review.waitFor({ timeout: 5000 }).catch(() => {});
+  check((await review.count()) === 1, "конец стопки предлагает листать ответы");
+  check(log.answered.length >= 1, `первая страница ответов подгружена заранее (${log.answered.length})`);
+  check((await page.getByRole("button", { name: "Позвать друзей" }).count()) === 1, "и позвать друзей");
+  await page.screenshot({ path: `${out}/review-1-end.png` });
+
+  await review.click();
+  await page.waitForSelector("article", { timeout: 5000 });
+  check((await s.topTitle()) === MINE[0].title, "первая карточка просмотра — первый ответ");
+  const strip = page.locator("article").first().getByTestId("answer-strip");
+  check(/Точно да/.test((await strip.textContent()) ?? ""), "полоса «Ваш ответ · Точно да»");
+  check(/только листает/.test(await page.getByTestId("review-line").textContent()), "строка «свайп только листает»");
+  check((await page.getByRole("button", { name: "Да", exact: true }).count()) === 0, "кнопок «Да/Нет» в просмотре нет");
+  check((await page.getByRole("link", { name: "Изменить ответ" }).getAttribute("href")) === `/events/${MINE[0].public_code}`, "«Изменить ответ» ведёт на событие");
+  await page.screenshot({ path: `${out}/review-2-card.png` });
+
+  // Единственный законный PUT в сценарии — по новой карточке e4 (первый свайп выше).
+  const reviewPuts = () => log.puts.filter((p) => p.event !== "e4");
+  await s.drag(220); // вбок — пружина, карточка остаётся
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === MINE[0].title, "свайп вправо в просмотре не листает");
+  await s.drag(-220);
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === MINE[0].title, "свайп влево в просмотре не листает");
+  await page.waitForTimeout(4600);
+  check(reviewPuts().length === 0, `в просмотре ни одного PUT (${JSON.stringify(reviewPuts())})`);
+
+  await s.drag(0, -260); // вверх — дальше
+  await page.waitForTimeout(700);
+  check((await s.topTitle()) === MINE[1].title, "свайп вверх — следующий ответ");
+  await s.drag(0, 260); // вниз — назад
+  await page.waitForTimeout(800);
+  check((await s.topTitle()) === MINE[0].title, "свайп вниз — предыдущий ответ");
+  await page.keyboard.press("ArrowUp");
+  await page.waitForTimeout(700);
+  await page.keyboard.press("ArrowUp");
+  await page.waitForTimeout(700);
+  check((await s.topTitle()) === MINE[2].title, "ArrowUp дважды — третий ответ");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(500);
+  check((await s.topTitle()) === MINE[2].title, "ArrowRight в просмотре ничего не делает");
+  await page.getByRole("button", { name: "Дальше" }).click();
+  await page.waitForTimeout(700);
+  check((await page.locator("article").count()) === 0, "после последнего ответа — конец просмотра");
+  check(/все ваши ответы/.test(await page.locator("main").textContent()), "текст «Это все ваши ответы»");
+  await page.screenshot({ path: `${out}/review-3-end.png` });
+  await page.getByRole("button", { name: "Смотреть сначала" }).click();
+  await page.waitForSelector("article", { timeout: 5000 });
+  check((await s.topTitle()) === MINE[0].title, "«Смотреть сначала» вернул к первому ответу");
+  check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
+  await s.ctx.close();
+}
+
+/* ── Гость: конец стопки без «моих ответов» ── */
+{
+  console.log("\n=== guest end");
+  const s = await open(browser, { me: null, feed: singlePage([CARDS[3]]) });
+  const { page, log } = s;
+  await s.dismissInstallHint();
+  await page.keyboard.press("ArrowUp");
+  await page.waitForTimeout(700);
+  check((await page.locator("article").count()) === 0, "гость пропустил единственную карточку");
+  check((await page.getByRole("button", { name: "Листать мои ответы" }).count()) === 0, "гостю ответы не предлагаются");
+  check(log.answered.length === 0, "и answered-запросов нет");
   check(s.errors.length === 0, `ошибок страницы нет (${s.errors.join(" || ")})`);
   await s.ctx.close();
 }
@@ -301,6 +386,34 @@ const browser = await chromium.launch();
   await cards.first().getByRole("button", { name: "Нет", exact: true }).click();
   await page.waitForTimeout(4800);
   check(log.puts.length === 1 && log.puts[0].grade === "definitely_no", `«Нет» записан через окно отмены: ${JSON.stringify(log.puts.map((p) => [p.event, p.grade]))}`);
+  check(errors.length === 0, `ошибок страницы нет (${errors.join(" || ")})`);
+  await ctx.close();
+}
+
+/* ── Широкий экран: просмотр ответов ── */
+{
+  console.log("\n=== desktop review");
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: "ru-RU" });
+  const log = await mockApi(ctx, { me: ME, feed: singlePage([]), answered: singlePage(MINE) });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.goto(`${base}/`, { waitUntil: "networkidle" });
+  const review = page.getByRole("button", { name: "Листать мои ответы" });
+  await review.waitFor({ timeout: 8000 }).catch(() => {});
+  check((await review.count()) === 1, "пустая доска предлагает листать ответы");
+  await review.click();
+  const mine = page.locator("ul[aria-label='Мои ответы'] > li");
+  await mine.first().waitFor({ timeout: 8000 });
+  check((await mine.count()) === MINE.length, `доска ответов показывает все (${await mine.count()})`);
+  check((await page.getByTestId("answer-strip").count()) === MINE.length, "у каждой карточки полоса с ответом");
+  check((await page.getByRole("button", { name: "Да", exact: true }).count()) === 0, "кнопок ответа нет");
+  check((await page.getByRole("link", { name: "Изменить ответ" }).count()) === MINE.length, "у каждой — «Изменить ответ»");
+  await page.screenshot({ path: `${out}/review-4-board.png`, fullPage: true });
+  await page.getByRole("button", { name: "К новым" }).click();
+  await page.waitForTimeout(800);
+  check((await mine.count()) === 0, "«К новым» вернул обычную ленту");
+  check(log.puts.length === 0, "PUT не было");
   check(errors.length === 0, `ошибок страницы нет (${errors.join(" || ")})`);
   await ctx.close();
 }

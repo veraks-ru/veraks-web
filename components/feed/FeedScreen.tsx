@@ -34,8 +34,9 @@ import { EndOfStack } from "./EndOfStack";
 import { FeedBoard } from "./FeedBoard";
 import { CategoryStrip, DailyCounter, FeedHeader, GuestLine } from "./FeedHeader";
 import { GuestGate } from "./GuestGate";
+import { ReviewLine } from "./ReviewLine";
 import { SubscriptionSheet } from "./SubscriptionSheet";
-import { SwipeButtons } from "./SwipeButtons";
+import { ReviewButtons, SwipeButtons } from "./SwipeButtons";
 import { useFeed } from "./useFeed";
 import { usePendingSubmits } from "./usePendingSubmits";
 
@@ -56,6 +57,11 @@ const countWaiting = (): number => readOutbox().filter((e) => e.owner === GUEST_
  * Решение всегда привязано к карточке, которую отпустили (жест передаёт её
  * сюда), а не к «верхней на данный момент»: пока карточка летит, стопка
  * может измениться отменой.
+ *
+ * Когда новые карточки кончились, вошедший может листать свои ответы
+ * (`feed.mode === "review"`): те же карточки с полосой «Ваш ответ», жест
+ * вверх — дальше, вниз — назад, вбок — пружина с подсказкой. Здесь ничего
+ * не записывается: ни PUT, ни ящик, ни счётчик за день.
  */
 export function FeedScreen() {
   const router = useRouter();
@@ -173,9 +179,19 @@ export function FeedScreen() {
 
   /* ── Решение по карточке, которую отпустили ── */
 
+  const review = feed.mode === "review";
+
   const onDecide = useCallback(
     (dir: SwipeDirection, card: FeedCard): boolean => {
       if (inFlight.current) return false;
+      if (review) {
+        // Просмотр: вбок жест не засчитывается вовсе (useSwipe), вниз — только если есть куда.
+        if (dir === "left" || dir === "right") return false;
+        if (dir === "down" && !feed.canBack) return false;
+        inFlight.current = card.id;
+        return true;
+      }
+      if (dir === "down") return false;
       if (dir === "up" || me || guestContinues()) {
         inFlight.current = card.id;
         return true;
@@ -187,13 +203,26 @@ export function FeedScreen() {
       setGateOpen(true);
       return false;
     },
-    [me],
+    [me, review, feed.canBack],
   );
 
   const onGone = useCallback(
     (dir: SwipeDirection, card: FeedCard) => {
       inFlight.current = null;
       setEnterFrom(null);
+      if (review) {
+        if (dir === "up") {
+          feed.next();
+          announce("Дальше");
+        } else if (dir === "down") {
+          // Предыдущая возвращается сверху — как при прокрутке назад.
+          setEnterFrom("up");
+          feed.back();
+          announce("Назад");
+        }
+        return;
+      }
+      if (dir === "down") return;
       if (dir === "up") {
         feed.skip(card.id);
         announce("Пропущено");
@@ -209,7 +238,7 @@ export function FeedScreen() {
       guestLast.current = { card, direction: dir };
       say(wordFor(dir), { action: { label: "Отменить", onClick: undoGuest }, durationMs: UNDO_MS });
     },
-    [feed, me, pending, say, undoGuest, announce],
+    [feed, me, pending, say, undoGuest, announce, review],
   );
 
   /* ── Ящик: дозаписать после входа и согласий, и когда вернулась сеть ── */
@@ -277,10 +306,18 @@ export function FeedScreen() {
       switch (e.key) {
         case "ArrowLeft":
         case "ArrowRight":
-        case "ArrowUp": {
+        case "ArrowUp":
+        case "ArrowDown": {
           e.preventDefault();
-          const dir = e.key === "ArrowLeft" ? "left" : e.key === "ArrowRight" ? "right" : "up";
-          flyRef.current?.(dir);
+          const dir =
+            e.key === "ArrowLeft"
+              ? "left"
+              : e.key === "ArrowRight"
+                ? "right"
+                : e.key === "ArrowUp"
+                  ? "up"
+                  : "down";
+          flyRef.current?.(dir); // в просмотре useSwipe сам игнорирует вбок, в ленте — вниз
           break;
         }
         case "Enter":
@@ -360,8 +397,13 @@ export function FeedScreen() {
                 />
               </div>
             )}
+            {review && (
+              <div className="mt-3">
+                <ReviewLine onExit={feed.exitReview} />
+              </div>
+            )}
 
-            <section className="mt-6" aria-label="Открытые события">
+            <section className="mt-6" aria-label={review ? "Мои ответы" : "Открытые события"}>
               {showSkeleton ? (
                 <BoardSkeleton />
               ) : feed.status === "error" ? (
@@ -374,6 +416,7 @@ export function FeedScreen() {
                   hasMore={feed.hasMore}
                   loadingMore={feed.loadingMore}
                   disabled={sheetOpen}
+                  browse={review}
                   onLoadMore={feed.loadMore}
                   onDecide={onDecide}
                   onGone={onGone}
@@ -382,9 +425,14 @@ export function FeedScreen() {
               ) : (
                 <EndOfStack
                   fill={false}
+                  variant={review ? "reviewed" : "fresh"}
                   skippedCount={feed.skippedCount}
                   filtered={categoryId !== null}
                   canPropose={!!me && subscribed}
+                  reviewAvailable={feed.reviewAvailable}
+                  onStartReview={feed.startReview}
+                  onRestartReview={feed.restartReview}
+                  onExitReview={feed.exitReview}
                   onRestoreSkipped={feed.restoreSkipped}
                   onClearFilter={() => setCategoryId(null)}
                 />
@@ -422,9 +470,15 @@ export function FeedScreen() {
           }}
         />
 
+        {review && (
+          <div className="mt-3">
+            <ReviewLine onExit={feed.exitReview} />
+          </div>
+        )}
+
         <section
           className="relative mt-4 min-h-[18rem] flex-1 md:h-[32rem] md:flex-none"
-          aria-label="Стопка событий"
+          aria-label={review ? "Мои ответы" : "Стопка событий"}
         >
           <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-10 -z-[1] opacity-30">
             <OracleArc activeIndex={null} className="w-full" />
@@ -439,6 +493,7 @@ export function FeedScreen() {
               cards={feed.cards}
               disabled={sheetOpen}
               enterFrom={enterFrom}
+              browse={review}
               onDecide={onDecide}
               onGone={onGone}
               onDetails={setDetails}
@@ -447,9 +502,14 @@ export function FeedScreen() {
             />
           ) : (
             <EndOfStack
+              variant={review ? "reviewed" : "fresh"}
               skippedCount={feed.skippedCount}
               filtered={categoryId !== null}
               canPropose={!!me && subscribed}
+              reviewAvailable={feed.reviewAvailable}
+              onStartReview={feed.startReview}
+              onRestartReview={feed.restartReview}
+              onExitReview={feed.exitReview}
               onRestoreSkipped={feed.restoreSkipped}
               onClearFilter={() => setCategoryId(null)}
             />
@@ -461,10 +521,19 @@ export function FeedScreen() {
         </div>
 
         <div className="mt-1">
-          <SwipeButtons
-            disabled={!topCard || showSkeleton || sheetOpen}
-            onSwipe={(dir) => flyRef.current?.(dir)}
-          />
+          {review ? (
+            <ReviewButtons
+              disabled={!topCard || showSkeleton || sheetOpen}
+              canBack={feed.canBack}
+              editHref={topCard ? `/events/${topCard.slug}` : null}
+              onSwipe={(dir) => flyRef.current?.(dir)}
+            />
+          ) : (
+            <SwipeButtons
+              disabled={!topCard || showSkeleton || sheetOpen}
+              onSwipe={(dir) => flyRef.current?.(dir)}
+            />
+          )}
         </div>
       </div>
 

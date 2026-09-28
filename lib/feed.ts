@@ -8,8 +8,10 @@
 
 import type { ConfidenceGrade } from "./confidence";
 
-export type SwipeDirection = "left" | "right" | "up";
-export type SwipeDecision = Exclude<SwipeDirection, "up">;
+// «down» существует только в режиме просмотра своих ответов: там жест
+// листает (вверх — дальше, вниз — назад) и ничего не записывает.
+export type SwipeDirection = "left" | "right" | "up" | "down";
+export type SwipeDecision = Exclude<SwipeDirection, "up" | "down">;
 
 export const SWIPE_GRADES: Record<SwipeDecision, ConfidenceGrade> = {
   left: "definitely_no",
@@ -21,6 +23,13 @@ export const SWIPE_LABELS: Record<SwipeDirection, string> = {
   left: "Нет",
   right: "Да",
   up: "Пропустить",
+  down: "Назад",
+};
+
+/** Подписи жестов в режиме просмотра своих ответов: там свайп только листает. */
+export const REVIEW_LABELS: Record<"up" | "down", string> = {
+  up: "Дальше",
+  down: "Назад",
 };
 
 /** Сколько времени есть на «Отменить», прежде чем прогноз уйдёт на сервер. */

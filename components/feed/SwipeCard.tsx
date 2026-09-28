@@ -3,8 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from "react";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { deadlineLabel, nPeople } from "@/lib/format";
-import { SWIPE_LABELS, type SwipeDirection } from "@/lib/feed";
+import { REVIEW_LABELS, SWIPE_LABELS, type SwipeDirection } from "@/lib/feed";
 import type { FeedCard } from "@/lib/types";
+import { AnswerStrip } from "./AnswerStrip";
 import { swipeBaseStyle, useSwipe } from "./useSwipe";
 
 /**
@@ -16,6 +17,11 @@ import { swipeBaseStyle, useSwipe } from "./useSwipe";
  * событий нет, поэтому карточка типографская: вопрос набран Unbounded —
  * это и есть «большой момент» экрана. Ответ толпы — словом и столбиками,
  * без процентов (DESIGN.md).
+ *
+ * В просмотре своих ответов (`browse`) карточка та же, но сверху — полоса
+ * с ответом зрителя, его столбик подсвечен в распределении, а жест только
+ * листает: штампы «Да/Нет» не показываются, вместо них «Дальше/Назад», и
+ * на попытку потянуть вбок проявляется подсказка, что ответ уже записан.
  */
 export function SwipeCard({
   card,
@@ -23,6 +29,7 @@ export function SwipeCard({
   depth,
   disabled,
   enterFrom,
+  browse = false,
   onDecide,
   onGone,
   onDetails,
@@ -34,6 +41,7 @@ export function SwipeCard({
   depth: number;
   disabled: boolean;
   enterFrom: SwipeDirection | null;
+  browse?: boolean;
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: () => void;
@@ -48,6 +56,7 @@ export function SwipeCard({
     onTap: onOpen,
     disabled: disabled || !top,
     enterFrom: top ? enterFrom : null,
+    browse,
   });
 
   useEffect(() => {
@@ -148,6 +157,12 @@ export function SwipeCard({
           </span>
         </div>
 
+        {browse && card.myGrade && (
+          <div className="mt-3 shrink-0">
+            <AnswerStrip grade={card.myGrade} />
+          </div>
+        )}
+
         <h2 className={`mt-3 shrink-0 line-clamp-5 font-display font-600 text-balance text-graphite ${titleSize}`}>
           {card.title}
         </h2>
@@ -188,6 +203,7 @@ export function SwipeCard({
           {card.forecasters > 0 ? (
             <MiniConsensus
               crowd={card.crowd}
+              mine={browse ? card.myGrade : undefined}
               aside={<span className="num shrink-0 text-slate">{nPeople(card.forecasters)}</span>}
             />
           ) : (
@@ -196,14 +212,37 @@ export function SwipeCard({
         </div>
       </article>
 
-      {top && (
+      {top && !browse && (
         <>
           <Stamp side="left" tone="yes-ink" label={SWIPE_LABELS.right} varName="--swipe-right" />
           <Stamp side="right" tone="no-ink" label={SWIPE_LABELS.left} varName="--swipe-left" />
           <Stamp side="bottom" tone="slate" label={SWIPE_LABELS.up} varName="--swipe-up" />
         </>
       )}
+      {top && browse && (
+        <>
+          <Stamp side="bottom" tone="slate" label={REVIEW_LABELS.up} varName="--swipe-up" />
+          <Stamp side="top" tone="slate" label={REVIEW_LABELS.down} varName="--swipe-down" />
+          <LockHint />
+        </>
+      )}
     </div>
+  );
+}
+
+/**
+ * Проявляется, когда в просмотре тянут карточку вбок: жест пружинит, а эта
+ * подпись объясняет почему. Прогресс — `--swipe-lock` из useSwipe.
+ */
+function LockHint() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-2xl bg-graphite/90 px-4 py-3 text-center text-sm font-600 leading-snug text-white"
+      style={{ opacity: "var(--swipe-lock, 0)" }}
+    >
+      Ответ уже записан. Свайп здесь только листает — изменить можно на странице события.
+    </span>
   );
 }
 
@@ -218,7 +257,7 @@ function Stamp({
   label,
   varName,
 }: {
-  side: "left" | "right" | "bottom";
+  side: "left" | "right" | "bottom" | "top";
   tone: "yes-ink" | "no-ink" | "slate";
   label: string;
   varName: string;
@@ -228,7 +267,9 @@ function Stamp({
       ? "top-6 left-6 -rotate-12"
       : side === "right"
         ? "top-6 right-6 rotate-12"
-        : "bottom-24 left-1/2 -translate-x-1/2";
+        : side === "top"
+          ? "top-6 left-1/2 -translate-x-1/2"
+          : "bottom-24 left-1/2 -translate-x-1/2";
   const color = `var(--color-${tone})`;
   return (
     <span

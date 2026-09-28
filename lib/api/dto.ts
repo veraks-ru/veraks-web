@@ -517,9 +517,16 @@ export interface ApiEventFeedCrowd {
 }
 
 // Имя с префиксом EventFeed: ApiFeedItem уже занят социальной лентой /feed.
+/** Ответ самого зрителя — только в ленте «мои ответы» (`?answered=true`). */
+export interface ApiEventFeedMyPrediction {
+  confidence_grade: ConfidenceGrade;
+  updated_at: string;
+}
+
 export interface ApiEventFeedItem extends ApiEvent {
   category: ApiEventFeedCategory;
   crowd: ApiEventFeedCrowd;
+  my_prediction: ApiEventFeedMyPrediction | null;
 }
 
 export interface ApiEventFeedPage {

@@ -95,6 +95,7 @@ export function toFeedCard(item: ApiEventFeedItem): FeedCard {
     resolvesAt: item.resolves_at,
     crowd: { counts },
     forecasters: item.crowd.total_count,
+    myGrade: item.my_prediction?.confidence_grade ?? null,
   };
 }
 

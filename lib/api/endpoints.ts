@@ -86,15 +86,19 @@ export const getEventTopPredictions = (id: string, limit = 10) =>
  * Лента открытых событий для свайпа: только те, что принимают прогнозы прямо
  * сейчас и по которым вошедший ещё не высказался; сводка толпы и категория
  * приходят внутри карточки. Курсор непрозрачный — отдаём обратно как есть.
+ * `answered` — режим «мои ответы»: наоборот, только события с прогнозом
+ * зрителя, и его ответ в каждой карточке (гостю — пусто).
  */
 export function getEventFeed(params: {
   cursor?: string | null;
   categoryId?: string | null;
   limit?: number;
+  answered?: boolean;
 } = {}): Promise<ApiEventFeedPage | null> {
   const q = new URLSearchParams();
   if (params.cursor) q.set("cursor", params.cursor);
   if (params.categoryId) q.set("category_id", params.categoryId);
+  if (params.answered) q.set("answered", "true");
   q.set("limit", String(params.limit ?? 20));
   return apiFetch<ApiEventFeedPage>(`/events/feed?${q.toString()}`);
 }

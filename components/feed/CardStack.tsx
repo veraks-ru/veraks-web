@@ -16,6 +16,7 @@ export function CardStack({
   cards,
   disabled,
   enterFrom,
+  browse = false,
   onDecide,
   onGone,
   onDetails,
@@ -25,6 +26,8 @@ export function CardStack({
   cards: FeedCard[];
   disabled: boolean;
   enterFrom: SwipeDirection | null;
+  /** Просмотр своих ответов: жест только листает (см. SwipeCard). */
+  browse?: boolean;
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: (card: FeedCard) => void;
@@ -43,6 +46,7 @@ export function CardStack({
           depth={i}
           disabled={disabled}
           enterFrom={enterFrom}
+          browse={browse}
           onDecide={onDecide}
           onGone={onGone}
           onDetails={() => onDetails(card)}

@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MiniConsensus } from "@/components/events/MiniConsensus";
 import { deadlineLabel, nPeople } from "@/lib/format";
+import { ButtonLink } from "@/components/ui/Button";
 import { GRADES, indexOfGrade } from "@/lib/confidence";
 import { SWIPE_LABELS, gradeForDirection, type SwipeDirection } from "@/lib/feed";
 import type { FeedCard } from "@/lib/types";
+import { AnswerStrip } from "./AnswerStrip";
 
 const LEAVE_MS = 220;
 
@@ -15,12 +17,16 @@ const LEAVE_MS = 220;
  * «Нет / Пропустить / Да». Ответил — карточка гаснет, сетка сдвигается;
  * отмена живёт в тосте внизу. Страницы подгружаются, когда прокрутка
  * подходит к концу.
+ *
+ * `browse` — просмотр своих ответов: у карточек полоса с ответом и ссылка
+ * «Изменить ответ» вместо кнопок; здесь ничего не записывается.
  */
 export function FeedBoard({
   cards,
   hasMore,
   loadingMore,
   disabled,
+  browse = false,
   onLoadMore,
   onDecide,
   onGone,
@@ -30,6 +36,7 @@ export function FeedBoard({
   hasMore: boolean;
   loadingMore: boolean;
   disabled: boolean;
+  browse?: boolean;
   onLoadMore: () => void;
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
@@ -52,12 +59,16 @@ export function FeedBoard({
 
   return (
     <>
-      <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Открытые события">
+      <ul
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        aria-label={browse ? "Мои ответы" : "Открытые события"}
+      >
         {cards.map((card) => (
           <BoardCard
             key={card.id}
             card={card}
             disabled={disabled}
+            browse={browse}
             onDecide={onDecide}
             onGone={onGone}
             onDetails={() => onDetails(card)}
@@ -73,12 +84,14 @@ export function FeedBoard({
 function BoardCard({
   card,
   disabled,
+  browse,
   onDecide,
   onGone,
   onDetails,
 }: {
   card: FeedCard;
   disabled: boolean;
+  browse: boolean;
   onDecide: (dir: SwipeDirection, card: FeedCard) => boolean | void;
   onGone: (dir: SwipeDirection, card: FeedCard) => void;
   onDetails: () => void;
@@ -120,7 +133,9 @@ function BoardCard({
   );
 
   const stamp =
-    leaving && leaving !== "up" ? GRADES[indexOfGrade(gradeForDirection(leaving))].label : SWIPE_LABELS.up;
+    leaving === "left" || leaving === "right"
+      ? GRADES[indexOfGrade(gradeForDirection(leaving))].label
+      : SWIPE_LABELS.up;
   const stampColor =
     leaving === "left" ? "var(--color-no-ink)" : leaving === "right" ? "var(--color-yes-ink)" : "var(--color-slate)";
 
@@ -148,6 +163,12 @@ function BoardCard({
           </span>
         </div>
 
+        {browse && card.myGrade && (
+          <div className="mt-3">
+            <AnswerStrip grade={card.myGrade} compact />
+          </div>
+        )}
+
         <h3 className="mt-3 line-clamp-4 font-display text-[1.1rem] leading-[1.25] font-600 text-balance text-graphite">
           <Link href={`/events/${card.slug}`} className="hover:text-[color:var(--color-signal-deep)]">
             {card.title}
@@ -161,11 +182,19 @@ function BoardCard({
           {card.forecasters > 0 ? (
             <MiniConsensus
               crowd={card.crowd}
+              mine={browse ? card.myGrade : undefined}
               aside={<span className="num shrink-0 text-slate">{nPeople(card.forecasters)}</span>}
             />
           ) : (
             <p className="text-xs text-slate">Никто ещё не высказался — ваш прогноз будет первым.</p>
           )}
+          {browse ? (
+            <div className="mt-3">
+              <ButtonLink href={`/events/${card.slug}`} variant="ghost-light" size="md" className="w-full">
+                Изменить ответ
+              </ButtonLink>
+            </div>
+          ) : (
           <div className="mt-3 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -192,6 +221,7 @@ function BoardCard({
               {SWIPE_LABELS.right}
             </button>
           </div>
+          )}
         </div>
       </article>
 

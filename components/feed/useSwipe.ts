@@ -40,6 +40,14 @@ interface Options {
   disabled?: boolean;
   /** Возврат после «Отменить»: карточка въезжает с той стороны, куда улетала. */
   enterFrom?: SwipeDirection | null;
+  /**
+   * Режим просмотра (свои ответы): жест только листает — вверх «дальше»,
+   * вниз «назад». Горизонтальный сдвиг гасится пружиной и никогда не
+   * засчитывается, а его прогресс отдаётся в `--swipe-lock`, чтобы карточка
+   * могла показать «ответ уже записан». Так человек видит, что свайп в
+   * сторону здесь ничего не перезаписывает.
+   */
+  browse?: boolean;
 }
 
 const DRAG_START_PX = 8;
@@ -50,6 +58,8 @@ const MAX_ROTATE_DEG = 12;
 const FLICK_VELOCITY = 0.6;
 /** Скорость считается по движению за последние миллисекунды, а не за весь жест. */
 const VELOCITY_WINDOW_MS = 100;
+/** В просмотре карточка идёт за пальцем вбок лишь на эту долю — пружина. */
+const BROWSE_SIDE_DAMPING = 0.18;
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -57,6 +67,7 @@ function offscreen(dir: SwipeDirection): { x: number; y: number; rot: number } {
   const w = typeof window === "undefined" ? 400 : window.innerWidth;
   const h = typeof window === "undefined" ? 800 : window.innerHeight;
   if (dir === "up") return { x: 0, y: -1.2 * h, rot: 0 };
+  if (dir === "down") return { x: 0, y: 1.2 * h, rot: 0 };
   const sign = dir === "right" ? 1 : -1;
   return { x: sign * 1.4 * w, y: 40, rot: sign * MAX_ROTATE_DEG * 1.5 };
 }
@@ -76,7 +87,14 @@ export const swipeBaseStyle: CSSProperties = {
 
 type Sample = { x: number; y: number; t: number };
 
-export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom = null }: Options) {
+export function useSwipe({
+  onDecide,
+  onGone,
+  onTap,
+  disabled = false,
+  enterFrom = null,
+  browse = false,
+}: Options) {
   const ref = useRef<HTMLDivElement>(null);
   const phase = useRef<Phase>("idle");
   const flying = useRef<SwipeDirection | null>(null);
@@ -87,17 +105,21 @@ export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom 
   const gone = useRef(onGone);
   const tap = useRef(onTap);
   const off = useRef(disabled);
+  const browsing = useRef(browse);
   decide.current = onDecide;
   gone.current = onGone;
   tap.current = onTap;
   off.current = disabled;
+  browsing.current = browse;
 
-  const setVars = useCallback((left: number, right: number, up: number) => {
+  const setVars = useCallback((left: number, right: number, up: number, down = 0, lock = 0) => {
     const el = ref.current;
     if (!el) return;
     el.style.setProperty("--swipe-left", String(left));
     el.style.setProperty("--swipe-right", String(right));
     el.style.setProperty("--swipe-up", String(up));
+    el.style.setProperty("--swipe-down", String(down));
+    el.style.setProperty("--swipe-lock", String(lock));
   }, []);
 
   /** Один раз: по концу перехода transform самого элемента или по таймеру — что раньше. */
@@ -138,7 +160,7 @@ export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom 
       if (!el) return;
       phase.current = "flying";
       flying.current = dir;
-      setVars(dir === "left" ? 1 : 0, dir === "right" ? 1 : 0, dir === "up" ? 1 : 0);
+      setVars(dir === "left" ? 1 : 0, dir === "right" ? 1 : 0, dir === "up" ? 1 : 0, dir === "down" ? 1 : 0);
       const to = offscreen(dir);
       const target = `translate3d(${to.x}px, ${to.y}px, 0) rotate(${to.rot}deg)`;
       const finish = () => {
@@ -164,11 +186,24 @@ export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom 
     (dx: number, dy: number) => {
       const el = ref.current;
       if (!el) return;
-      const rot = Math.max(-MAX_ROTATE_DEG, Math.min(MAX_ROTATE_DEG, dx * 0.05));
-      el.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${rot}deg)`;
       const t = 0.35 * el.offsetWidth;
       const tUp = 0.3 * el.offsetHeight;
       const vertical = Math.abs(dy) > Math.abs(dx);
+      if (browsing.current) {
+        // Вбок — пружина без наклона и без штампов ответа; вверх/вниз — как есть.
+        const x = dx * BROWSE_SIDE_DAMPING;
+        el.style.transform = `translate3d(${x}px, ${dy}px, 0) rotate(0deg)`;
+        setVars(
+          0,
+          0,
+          vertical ? clamp01(-dy / tUp) : 0,
+          vertical ? clamp01(dy / tUp) : 0,
+          vertical ? 0 : clamp01(Math.abs(dx) / (0.6 * t)),
+        );
+        return;
+      }
+      const rot = Math.max(-MAX_ROTATE_DEG, Math.min(MAX_ROTATE_DEG, dx * 0.05));
+      el.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${rot}deg)`;
       setVars(clamp01(-dx / t), clamp01(dx / t), vertical ? clamp01(-dy / tUp) : 0);
     },
     [setVars],
@@ -189,8 +224,11 @@ export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom 
     const t = 0.35 * w;
     const tUp = 0.3 * el.offsetHeight;
     if (Math.abs(dy) > Math.abs(dx)) {
-      return dy < 0 && (-dy >= tUp || vy < -FLICK_VELOCITY) ? "up" : null;
+      if (dy < 0) return -dy >= tUp || vy < -FLICK_VELOCITY ? "up" : null;
+      // Вниз — только в просмотре («назад»); в обычной ленте такого жеста нет.
+      return browsing.current && (dy >= tUp || vy > FLICK_VELOCITY) ? "down" : null;
     }
+    if (browsing.current) return null; // вбок в просмотре не засчитывается никогда
     if (Math.abs(dx) >= t) return dx > 0 ? "right" : "left";
     const flick =
       Math.abs(vx) > FLICK_VELOCITY && Math.abs(dx) > 0.12 * w && Math.sign(vx) === Math.sign(dx);
@@ -263,6 +301,7 @@ export function useSwipe({ onDecide, onGone, onTap, disabled = false, enterFrom 
   const fly = useCallback(
     (dir: SwipeDirection) => {
       if (off.current || phase.current !== "idle") return;
+      if (browsing.current ? dir === "left" || dir === "right" : dir === "down") return;
       if (decide.current(dir) === false) return;
       flyTo(dir);
     },

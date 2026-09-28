@@ -60,6 +60,8 @@ export interface FeedCard {
   resolvesAt: string;
   crowd: CrowdDistribution;
   forecasters: number;
+  /** Ответ самого зрителя — есть только у карточек ленты «мои ответы». */
+  myGrade: ConfidenceGrade | null;
 }
 
 /* ───────────────────── Профиль и рейтинги ───────────────────── */
