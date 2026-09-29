@@ -131,7 +131,8 @@ export function EmailLoginForm({
           inputMode="email"
           autoFocus={autoFocus}
           autoComplete="email"
-          className={inputCls}
+          // ym-disable-keys: Вебвизор Метрики не записывает ввод адреса.
+          className={`${inputCls} ym-disable-keys`}
           placeholder="you@example.com"
           value={email}
           onChange={(e) => {

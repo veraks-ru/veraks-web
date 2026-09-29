@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/app/AuthProvider";
 import { InviteRedeemer } from "@/components/app/InviteRedeemer";
 import { AppChrome } from "@/components/app/AppChrome";
 import { AppleSplashLinks } from "@/components/app/AppleSplashLinks";
+import { YandexMetrika } from "@/components/app/YandexMetrika";
 
 // Самохостинг шрифтов (variable TTF, латиница + кириллица): сборка не ходит в
 // сеть за Google Fonts — образ собирается оффлайн (важно для CI/k8s).
@@ -130,6 +131,7 @@ export default function RootLayout({
           <InviteRedeemer />
           <AppChrome>{children}</AppChrome>
         </AuthProvider>
+        <YandexMetrika />
       </body>
     </html>
   );
