@@ -7,14 +7,13 @@ import { ackCookieNotice, useCookieNoticeAcked } from "@/lib/cookieNotice";
 
 /**
  * Уведомление о cookie (политика ПДн, п. 9 — там и про Яндекс Метрику).
- * Показывается до первого «Понятно»; положение и тон — как у InstallPrompt:
- * на ленте и тёмных экранах сверху, чтобы не закрывать кнопки ответа.
+ * Показывается до первого «Понятно». Всегда внизу (над нижней панелью на
+ * телефоне): сверху плашка перекрывала шапку и навигацию.
  */
 export function CookieNotice() {
   const acked = useCookieNoticeAcked();
   const dark = useChromeTone() === "dark";
   const pathname = usePathname();
-  const top = dark || pathname === "/";
 
   // В админке и на страницах документов баннер лишний: там его текст или
   // уже читают, или это команда площадки.
@@ -26,11 +25,7 @@ export function CookieNotice() {
     <div
       role="region"
       aria-label="Уведомление о cookie"
-      className={`fixed inset-x-0 z-40 px-3 ${
-        top
-          ? "top-[calc(env(safe-area-inset-top)+0.75rem)]"
-          : "bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:bottom-4"
-      }`}
+      className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-40 px-3 md:bottom-4"
     >
       <div
         className={`mx-auto flex max-w-md items-center gap-3 rounded-[var(--radius-card)] border p-3.5 shadow-lg ${
