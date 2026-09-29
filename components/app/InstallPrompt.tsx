@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useChromeTone } from "@/lib/chromeTone";
+import { useCookieNoticeAcked } from "@/lib/cookieNotice";
 
 const DISMISSED_KEY = "veraks:install-dismissed";
 
@@ -47,6 +48,8 @@ export function InstallPrompt() {
   const dark = useChromeTone() === "dark";
   const onFeed = usePathname() === "/";
   const top = dark || onFeed;
+  // Встаёт на то же место, что и уведомление о cookie, — ждём, пока его закроют.
+  const cookieAcked = useCookieNoticeAcked();
 
   useEffect(() => {
     if (isStandalone()) return;
@@ -89,7 +92,7 @@ export function InstallPrompt() {
     dismiss();
   }
 
-  if (!deferred && !showIosHint) return null;
+  if (!cookieAcked || (!deferred && !showIosHint)) return null;
 
   return (
     <div

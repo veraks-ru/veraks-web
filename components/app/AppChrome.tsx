@@ -1,6 +1,7 @@
 "use client";
 
 import { BottomNav, useBottomNavVisible } from "@/components/app/BottomNav";
+import { CookieNotice } from "@/components/app/CookieNotice";
 import { InstallPrompt } from "@/components/app/InstallPrompt";
 import { ServiceWorkerRegistrar } from "@/components/app/ServiceWorkerRegistrar";
 
@@ -26,6 +27,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       <BottomNav />
+      <CookieNotice />
       <InstallPrompt />
       <ServiceWorkerRegistrar />
     </>
