@@ -6,7 +6,7 @@ import { useChromeTone } from "@/lib/chromeTone";
 import { ackCookieNotice, useCookieNoticeAcked } from "@/lib/cookieNotice";
 
 /**
- * Уведомление об аналитических cookie (Яндекс Метрика, политика ПДн, п. 9).
+ * Уведомление о cookie (политика ПДн, п. 9 — там и про Яндекс Метрику).
  * Показывается до первого «Понятно»; положение и тон — как у InstallPrompt:
  * на ленте и тёмных экранах сверху, чтобы не закрывать кнопки ответа.
  */
@@ -40,10 +40,9 @@ export function CookieNotice() {
         }`}
       >
         <p className={`min-w-0 flex-1 text-xs leading-relaxed ${dark ? "text-haze" : "text-slate"}`}>
-          Мы используем cookie и Яндекс Метрику, чтобы понимать, как работает
-          сайт. Подробнее — в{" "}
+          Мы используем{" "}
           <Link href="/legal/pdn" className="underline underline-offset-2">
-            политике персональных данных
+            cookie
           </Link>
           .
         </p>
